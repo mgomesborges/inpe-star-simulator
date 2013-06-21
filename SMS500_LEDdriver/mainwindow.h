@@ -39,6 +39,7 @@ private:
 
     void ledDriverSignalAndSlot();
     void ledDriverConfigureDac(char dac);
+    void saveLedModelingData(QString filePath);
 
 private slots:
     void aboutThisSoftware();
@@ -73,6 +74,7 @@ private slots:
     void ledDriverDac10Changed();
     void ledDriverDac11Changed();
     void ledDriverDac12Changed();
+    void ledModeling();
 };
 
 #endif // MAINWINDOW_H

@@ -12,6 +12,8 @@
 
 #include "leddriver.h"
 
+#include <QTime>
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -79,26 +81,32 @@ void MainWindow::showInfo(const QString &text)
 
 void MainWindow::ledDriverConnectDisconnect()
 {
-    if (ui->btnConnectDisconnectLED->text().contains(tr("Connect"))) {
-        ui->btnConnectDisconnectLED->setText(tr("Disconnect"));
-        ui->btnConnectDisconnectLED->setIcon(QIcon(":/pics/disconnect.png"));
-        if (ledDriver->openConnection() == true) {
-            // Configure DACs
-            ledDriverDac04Changed();
-            ledDriverDac05Changed();
-            ledDriverDac06Changed();
-            ledDriverDac07Changed();
-            ledDriverDac08Changed();
-            ledDriverDac09Changed();
-            ledDriverDac10Changed();
-            ledDriverDac11Changed();
-            ledDriverDac12Changed();
-        }
-    } else {
-        ledDriver->closeConnection();
-        ui->btnConnectDisconnectLED->setText(tr("Connect"));
-        ui->btnConnectDisconnectLED->setIcon(QIcon(":/pics/reconnect.png"));
-    }
+    ledDriver->start();
+
+//    if (ui->btnConnectDisconnectLED->text().contains(tr("Connect"))) {
+//        ui->btnConnectDisconnectLED->setText(tr("Disconnect"));
+//        ui->btnConnectDisconnectLED->setIcon(QIcon(":/pics/disconnect.png"));
+
+//        // Prevents communnication errors
+//        ledDriver->closeConnection();
+
+//        if (ledDriver->openConnection() == true) {
+//            // Configure DACs
+//            ledDriverDac04Changed();
+//            ledDriverDac05Changed();
+//            ledDriverDac06Changed();
+//            ledDriverDac07Changed();
+//            ledDriverDac08Changed();
+//            ledDriverDac09Changed();
+//            ledDriverDac10Changed();
+//            ledDriverDac11Changed();
+//            ledDriverDac12Changed();
+//        }
+//    } else {
+//        ledDriver->closeConnection();
+//        ui->btnConnectDisconnectLED->setText(tr("Connect"));
+//        ui->btnConnectDisconnectLED->setIcon(QIcon(":/pics/reconnect.png"));
+//    }
 }
 
 void MainWindow::ledDriverConnectionError(QString serialError, QString statusBarMsg)
@@ -254,6 +262,138 @@ void MainWindow::ledDriverConfigureDac(char dac)
             break;
         }
         ledDriver->wait();
+    }
+}
+
+void MainWindow::ledModeling()
+{
+    QString filePath = QFileDialog::getExistingDirectory(this, tr("Choose the directory to save Save Led Modeling Data"), QDir::homePath());
+
+    if (filePath.isEmpty()) {
+        return;
+    }
+
+    // SMS500 Configure
+    if (sms500->isConnected() == false) {
+        if (sms500Connect() == false) {
+            return;
+        }
+    }
+
+    sms500->stop();
+
+    // Operation Mode
+    QString operationMode("Flux");
+    QString calibratedDataPath("Flux.dat");
+
+    sms500->setOperationMode(operationMode);
+    sms500->setCalibratedDataPath(calibratedDataPath);
+
+    // Parameters
+    sms500->setAutoRange(false);
+    sms500->setRange(ui->integrationTimeComboBox->currentIndex());
+    sms500->setBoxCarSmoothing(ui->smoothingSpinBox->value());
+    sms500->setAverage(ui->samplesToAverageSpinBox->value());
+    sms500->setStartWave(ui->startWaveLineEdit->text().toInt());
+    sms500->setStopWave(ui->stopWaveLineEdit->text().toInt());
+    sms500->setCorrecDarkCurrent(ui->dynamicDarkCheckBox->isChecked());
+    sms500->setNoiseReduction(ui->noiseReductionCheckBox->isChecked(), ui->noiseReductionLineEdit->text().toDouble());
+    sms500->setNumberOfScans(1);
+
+    // LED Driver Connection
+    if (ledDriver->openConnection() == false) {
+        return;
+    }
+
+    QTime time1;
+    time1.start();
+
+    // For DAC4 to DAC 12
+    for (int dac = 5; dac < 6; dac++) {
+
+        // For Port1 to Port8
+        for (int port = 7; port < 8; port++) {
+
+            // RESET Port1 to Port8
+            valueOfPort[0] = 0;
+            valueOfPort[1] = 0;
+            valueOfPort[2] = 0;
+            valueOfPort[3] = 0;
+            valueOfPort[4] = 0;
+            valueOfPort[5] = 0;
+            valueOfPort[6] = 0;
+            valueOfPort[6] = 0;
+
+            // For Digital Level 0 to 4095
+            for (int level = 0; level < 4096; level += 100) {
+
+                // LED Driver configure
+                valueOfPort[port] = level;
+                ledDriverConfigureDac( 5 ); // DAC 6
+                ledDriver->wait();
+
+                // Starts timeout for LED Modeling
+                time1.restart();
+                while (time1.elapsed() < 1000) {
+                    ui->statusBar->showMessage(QString::number(time1.elapsed()), 1000);
+                }
+
+                // Performs Scan with SMS500
+                sms500->start();
+                sms500->wait();
+                statusBar()->showMessage(tr("Geting Spectral Data :: Level: %1").arg(level), 1000);
+
+                // Saves result
+                saveLedModelingData(filePath + tr("/channel%1_%2nd.txt").arg(dac * 8 + port + 1).arg(level));
+            }
+        }
+    }
+
+    statusBar()->showMessage(tr("LED Modeling Complete"), 5000);
+}
+
+void MainWindow::saveLedModelingData(QString filePath)
+{
+    qDebug() << filePath;
+    using namespace std;
+    // ofstream constructor opens file
+    ofstream outFile( filePath.toAscii().data(), ios::out );
+
+    // exit program if unable to create file
+    if ( !outFile ) // overloaded ! operator
+    {
+        statusBar()->showMessage( tr("File could not be create") );
+        exit(1);
+    }
+
+    outFile << "Start wavelength:\t" << sms500->startWavelength() << endl;
+    outFile << "Stop wavelength:\t" << sms500->stopWavelength() << endl;
+    outFile << "Dominate wavelength:\t" << sms500->dominanteWavelength() << endl;
+    outFile << "Peak wavelength:\t" << sms500->peakWavelength() << endl;
+    outFile << "Power (W):\t\t" << sms500->power() << endl;
+    outFile << "Integration time (ms):\t" << sms500->integrationTime() << endl;
+    outFile << "Purity:\t\t\t" << sms500->purity() << endl;
+    outFile << "FWHM:\t\t\t" << sms500->fwhm() << endl;
+    outFile << "\nHolds the Wavelength Data:" << endl;
+    outFile << "nm\tuW/nm" << endl;
+
+    QString number;
+
+    double *masterData;
+    int    *waveLength;
+
+    masterData = sms500->masterData();
+    waveLength = sms500->wavelength();
+
+    for (int i = 0; i < sms500->points(); i++) {
+        if (masterData[i] < 0) {
+            number = QString("0");
+        } else {
+            number = QString::number(masterData[i]);
+            number.replace(".", ",");
+        }
+
+        outFile << waveLength[ i ] << "\t" << number.toAscii().data() << endl;
     }
 }
 
@@ -414,11 +554,11 @@ void MainWindow::startStopScan()
 
 void MainWindow::performScan()
 {
-    if (sms500->isConnected() == false) {
-        if (sms500Connect() == false) {
-            return;
-        }
-    }
+    //    if (sms500->isConnected() == false) {
+    //        if (sms500Connect() == false) {
+    //            return;
+    //        }
+    //    }
 
     statusBar()->showMessage(tr("Geting Spectral Data"), 5000);
     sms500Configure();
@@ -526,8 +666,12 @@ void MainWindow::saveScanData()
     waveLength = sms500->wavelength();
 
     for (int i = 0; i < sms500->points(); i++) {
-        number = QString::number(masterData[i]);
-        number.replace(".", ",");
+        if (masterData[i] < 0) {
+            number = QString("0");
+        } else {
+            number = QString::number(masterData[i]);
+            number.replace(".", ",");
+        }
 
         outFile << waveLength[ i ] << "\t" << number.toAscii().data() << endl;
     }
@@ -651,6 +795,8 @@ void MainWindow::ledDriverSignalAndSlot()
 {
     connect(ui->btnConnectDisconnectLED, SIGNAL(clicked()), this, SLOT(ledDriverConnectDisconnect()));
     connect(ledDriver, SIGNAL(connectionError(QString, QString)), this, SLOT(ledDriverConnectionError(QString, QString)));
+
+    connect(ui->btnLedModeling, SIGNAL(clicked()), this, SLOT(ledModeling()));
 
     connect(ui->dac04channel25, SIGNAL(editingFinished()), this, SLOT(ledDriverDac04Changed()));
     connect(ui->dac04channel26, SIGNAL(editingFinished()), this, SLOT(ledDriverDac04Changed()));

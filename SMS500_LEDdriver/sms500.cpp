@@ -274,7 +274,8 @@ bool SMS500::isNeedAutoScan()
         satured = false;
     }
 
-    if ((max > spectrometer.Channel[channel].SetMaxCounts) || (max < spectrometer.Channel[channel].SetMinCounts)) {
+    if (((max > spectrometer.Channel[channel].SetMaxCounts) && (resultData.IntgTime != 1.1)) ||
+        ((max < spectrometer.Channel[channel].SetMinCounts) && (resultData.IntgTime != 4000))) {
         return true;
     }
 

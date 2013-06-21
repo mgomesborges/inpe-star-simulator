@@ -3624,7 +3624,7 @@
        <widget class="QLabel" name="saturedLabel_2">
         <property name="geometry">
          <rect>
-          <x>630</x>
+          <x>590</x>
           <y>60</y>
           <width>82</width>
           <height>23</height>
@@ -3658,7 +3658,7 @@
          <rect>
           <x>10</x>
           <y>10</y>
-          <width>70</width>
+          <width>87</width>
           <height>55</height>
          </rect>
         </property>
@@ -3717,22 +3717,32 @@
          <string>    Scan number: 0</string>
         </property>
        </widget>
-       <zorder>saturedLabel_2</zorder>
-       <zorder>btnConnectDisconnectLED</zorder>
-       <zorder>groupBox_7</zorder>
-       <zorder>groupBox_8</zorder>
-       <zorder>groupBox_9</zorder>
-       <zorder>groupBox_10</zorder>
-       <zorder>groupBox_11</zorder>
-       <zorder>groupBox_12</zorder>
-       <zorder>groupBox_13</zorder>
-       <zorder>groupBox_14</zorder>
-       <zorder>groupBox_15</zorder>
-       <zorder>groupBox_16</zorder>
-       <zorder>groupBox_17</zorder>
-       <zorder>groupBox_18</zorder>
-       <zorder>plotAreaLed</zorder>
-       <zorder>scanNumberLabel_2</zorder>
+       <widget class="QToolButton" name="btnLedModeling">
+        <property name="geometry">
+         <rect>
+          <x>100</x>
+          <y>10</y>
+          <width>87</width>
+          <height>55</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>LED Modeling</string>
+        </property>
+        <property name="icon">
+         <iconset resource="Pics.qrc">
+          <normaloff>:/pics/led.jpg</normaloff>:/pics/led.jpg</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>32</width>
+          <height>32</height>
+         </size>
+        </property>
+        <property name="toolButtonStyle">
+         <enum>Qt::ToolButtonTextUnderIcon</enum>
+        </property>
+       </widget>
       </widget>
      </widget>
     </item>

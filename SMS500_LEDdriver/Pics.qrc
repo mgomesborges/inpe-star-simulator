@@ -7,5 +7,6 @@
         <file>pics/stop.png</file>
         <file>pics/save.png</file>
         <file>pics/logo.png</file>
+        <file>pics/led.jpg</file>
     </qresource>
 </RCC>
