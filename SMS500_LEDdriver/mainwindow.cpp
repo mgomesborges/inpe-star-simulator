@@ -56,11 +56,18 @@ void MainWindow::resizeEvent(QResizeEvent *)
 
         ui->scanNumberLabel_2->show();
         ui->scanNumberLabel_2->setGeometry(720,20, 230, 23);
+
+        if (this->width() >= 1100) {
+            ui->scanInfo->show();
+            ui->scanInfo->setGeometry(950,20,230,23);
+        }
+
         ui->saturedLabel_2->setGeometry(720, 60, 82, 23);
     } else {
         ui->plotAreaLed->resize(5, 457);
         plotLedDriver->resize( ui->plotAreaLed->width(), ui->plotAreaLed->height());
         ui->scanNumberLabel_2->hide();
+        ui->scanInfo->hide();
         ui->saturedLabel_2->hide();
     }
 }
@@ -289,6 +296,8 @@ void MainWindow::ledModeling()
         // Parameters
         ui->AutoRangeCheckBox->setChecked(true);
         ui->numberOfScansLineEdit->setText("1");
+//        ui->dynamicDarkCheckBox->setChecked(true);
+//        ui->smoothingSpinBox->setValue(2);
 
         sms500Configure();
 
@@ -297,43 +306,57 @@ void MainWindow::ledModeling()
             ledDriverConnectDisconnect();
         }
 
-        int startDAC   = ui->startDAC->text().toInt();
-        int endDAC     = ui->endDAC->text().toInt();
-        int startPort  = ui->startPort->text().toInt();
-        int endPort    = ui->endPort->text().toInt();
-        int startLevel = ui->startLevel->text().toInt();
-        int endLevel   = ui->endLevel->text().toInt();
-        int levelInc   = ui->levelIncrement->text().toInt();
-
-        ledDriver->setModelingParameters(startDAC, endDAC, startPort, endPort, startLevel, endLevel, levelInc);
-
-        ui->btnLedModeling->setText("STOP Modeling");
+        ledDriver->setModelingParameters(ui->startChannel->text().toInt(),
+                                         ui->endChannel->text().toInt(),
+                                         ui->levelDecrement->text().toInt());
 
         scanNumberOfLedModeling = 0;
 
+        ui->btnLedModeling->setText("STOP Modeling");
+        ui->btnLedModeling->setIcon(QIcon(":/pics/led.jpg"));
+
         ledDriver->start();
+
+        // Inits LED Modeling Data structure
+        ledModelingData.resize( 641 ); // Size = 1000nm - 360nm = 640
+        for (int i = 0; i <= 640; i++) {
+            ledModelingData[i].resize( 1 );
+            ledModelingData[i][0] = i + 360;
+        }
+
+        // Disable LED Driver GUI Interface
+//        ui->groupBox_5->setEnabled(false);
+//        ui->groupBox_10->setEnabled(false);
+//        ui->groupBox_11->setEnabled(false);
+//        ui->groupBox_12->setEnabled(false);
+//        ui->groupBox_13->setEnabled(false);
+//        ui->groupBox_14->setEnabled(false);
+//        ui->groupBox_15->setEnabled(false);
+//        ui->groupBox_16->setEnabled(false);
+//        ui->groupBox_17->setEnabled(false);
+//        ui->groupBox_18->setEnabled(false);
     } else {
         ledDriver->stop();
         ledDriver->wait(3000);
         ui->btnLedModeling->setText("LED Modeling");
+        ui->btnLedModeling->setIcon(QIcon(":/pics/led.jpg"));
     }
 }
 
 void MainWindow::ledModelingPerformScan()
 {
-    scanNumberOfLedModeling++;
-    ui->scanNumberLabel->setText(tr("    Scan number: %1").arg(scanNumberOfLedModeling));
-    ui->scanNumberLabel_2->setText(tr("    Scan number: %1").arg(scanNumberOfLedModeling));
-    statusBar()->showMessage(tr("LED Modeling Perform Scan %1").arg(scanNumberOfLedModeling));
-
     sms500->start();
 }
 
 void MainWindow::ledModelingSaveData(QString fileName)
 {
+    scanNumberOfLedModeling++;
+    ui->scanNumberLabel->setText(tr("    Scan number: %1").arg(scanNumberOfLedModeling));
+    ui->scanNumberLabel_2->setText(tr("    Scan number: %1").arg(scanNumberOfLedModeling));
+
     // Stop Condition
-    if (sms500->maxMasterData() <= 5) {
-        ledDriver->stop();
+    if (sms500->maxMasterData() < 5) {
+        ledDriver->modelingNextChannel();
     }
 
     QString filePath(ledModelingFilePath + fileName);
@@ -354,6 +377,8 @@ void MainWindow::ledModelingSaveData(QString fileName)
     outFile << "Peak wavelength:\t" << sms500->peakWavelength() << std::endl;
     outFile << "Power (W):\t\t" << sms500->power() << std::endl;
     outFile << "Integration time (ms):\t" << sms500->integrationTime() << std::endl;
+    outFile << "Samples to Average:\t" << sms500->samplesToAverage() << std::endl;
+    outFile << "Boxcar Smoothing: \t" << sms500->boxCarSmoothing() << std::endl;
     outFile << "Purity:\t\t\t" << sms500->purity() << std::endl;
     outFile << "FWHM:\t\t\t" << sms500->fwhm() << std::endl;
     outFile << "\nHolds the Wavelength Data:" << std::endl;
@@ -375,13 +400,82 @@ void MainWindow::ledModelingSaveData(QString fileName)
 
     outFile.close();
 
+    // Adds Data in LED Modeling Data
+    for (int i = 0; i < sms500->points(); i++) {
+        ledModelingData[i].resize(scanNumberOfLedModeling + 1);
+
+        if (masterData[i] < 0) {
+            ledModelingData[i][scanNumberOfLedModeling] = 0;
+        } else {
+            ledModelingData[i][scanNumberOfLedModeling] = masterData[i];
+        }
+    }
+
     ledDriver->enabledModelingContinue();
+}
+
+void MainWindow::ledModelingSaveChannelData(QString channel)
+{
+    // Saves LED Model Data
+    QString filename(tr("/ch%1.txt").arg(channel));
+
+    QString ledFilePath(ledModelingFilePath + filename);
+
+    // ofstream constructor opens file
+    std::ofstream ledModelingFile( ledFilePath.toAscii().data(), std::ios::out );
+
+    // exit program if unable to create file
+    if ( !ledModelingFile ) // overloaded ! operator
+    {
+        QMessageBox::warning(this, tr("Save Modeling Data Error"), tr("File could not be create"));
+        return;
+    }
+
+    for (int i = 0; i <= 640; i++) {
+        for (unsigned int j = 0; j < ledModelingData[0].size(); j++) {
+            ledModelingFile << ledModelingData[i][j] << '\t';
+        }
+        ledModelingFile << std::endl;
+    }
+
+    ledModelingFile.close();
+
+
+    // Inits LED Modeling Data structure
+    ledModelingData.erase(ledModelingData.begin(), ledModelingData.end());
+    ledModelingData.resize( 641 ); // Size = 1000nm - 360nm = 640
+    for (int i = 0; i <= 640; i++) {
+        ledModelingData[i].resize( 1 );
+        ledModelingData[i][0] = i + 360;
+    }
+
+    // Resets scanNumberOfLedModeling and Scan Info
+    scanNumberOfLedModeling = 0;
+    ui->scanInfo->setText(tr("Next Channel... Wait!"));
 }
 
 void MainWindow::ledModelingFinished()
 {
     ui->btnLedModeling->setText("LED Modeling");
+    ui->btnLedModeling->setIcon(QIcon(":/pics/led.jpg"));
     QMessageBox::warning(this, tr("LED Modeling finished"), tr("Press Ok to continue"));
+
+    // Enable LED Driver GUI Interface
+//    ui->groupBox_5->setEnabled(true);
+//    ui->groupBox_10->setEnabled(true);
+//    ui->groupBox_11->setEnabled(true);
+//    ui->groupBox_12->setEnabled(true);
+//    ui->groupBox_13->setEnabled(true);
+//    ui->groupBox_14->setEnabled(true);
+//    ui->groupBox_15->setEnabled(true);
+//    ui->groupBox_16->setEnabled(true);
+//    ui->groupBox_17->setEnabled(true);
+    //    ui->groupBox_18->setEnabled(true);
+}
+
+void MainWindow::ledModelingInfo(QString message)
+{
+    ui->scanInfo->setText(message);
 }
 
 void MainWindow::sms500Configure()
@@ -424,7 +518,7 @@ bool MainWindow::sms500Connect()
     sms500Configure();
 
     if (sms500->openConnection() == true) {
-        statusBar()->showMessage(tr("SMS500 successfully connected"));
+        statusBar()->showMessage(tr("SMS500 successfully connected"),5000);
         ui->btnConnectDisconnect->setIcon(QIcon(":/pics/disconnect.png"));
         ui->btnConnectDisconnect->setText(tr("Disconnect SMS"));
         return true;
@@ -551,8 +645,8 @@ void MainWindow::plotScanResult(const double *masterData, const int *wavelegth, 
 {
     QPolygonF points;
 
-    plot->setPlotLimits(300, 1200, 0, amplitude);
-    plotLedDriver->setPlotLimits(300, 1200, 0, amplitude);
+    plot->setPlotLimits(300, 1100, 0, amplitude);
+    plotLedDriver->setPlotLimits(300, 1100, 0, amplitude);
 
     for (int i = 0; i < numberOfPoints; i++) {
         if (masterData[i] < 0) {
@@ -774,12 +868,13 @@ void MainWindow::sms500SignalAndSlot()
 
 void MainWindow::ledDriverSignalAndSlot()
 {
-    connect(ledDriver, SIGNAL(connectionError(QString, QString)), this, SLOT(ledDriverConnectionError(QString, QString)));
     connect(ledDriver, SIGNAL(warningMessage(QString,QString)),   this, SLOT(warningMessage(QString,QString)));
 
-    connect(ledDriver, SIGNAL(performScan()),      this, SLOT(ledModelingPerformScan()));
-    connect(ledDriver, SIGNAL(saveData(QString)),  this, SLOT(ledModelingSaveData(QString)));
-    connect(ledDriver, SIGNAL(modelingFinished()), this, SLOT(ledModelingFinished()));
+    connect(ledDriver, SIGNAL(performScan()),        this, SLOT(ledModelingPerformScan()));
+    connect(ledDriver, SIGNAL(saveData(QString)),    this, SLOT(ledModelingSaveData(QString)));
+    connect(ledDriver, SIGNAL(saveAllData(QString)), this, SLOT(ledModelingSaveChannelData(QString)));
+    connect(ledDriver, SIGNAL(modelingFinished()),   this, SLOT(ledModelingFinished()));
+    connect(ledDriver, SIGNAL(info(QString)),        this, SLOT(ledModelingInfo(QString)));
 
     connect(ui->btnConnectDisconnectLED, SIGNAL(clicked()),      this,      SLOT(ledDriverConnectDisconnect()));
     connect(ui->btnLedModeling,          SIGNAL(clicked()),      this,      SLOT(ledModeling()));

@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QVector>
 
 class SMS500;
 class LedDriver;
@@ -31,6 +32,8 @@ private:
     char txBuffer[256];
     QString ledModelingFilePath;
     int scanNumberOfLedModeling;
+
+    std::vector< std::vector<double> > ledModelingData;
 
     void resizeEvent(QResizeEvent *);
 
@@ -79,7 +82,9 @@ private slots:
     void ledModeling();
     void ledModelingPerformScan();
     void ledModelingSaveData(QString fileName);
+    void ledModelingSaveChannelData(QString channel);
     void ledModelingFinished();
+    void ledModelingInfo(QString message);
 };
 
 #endif // MAINWINDOW_H

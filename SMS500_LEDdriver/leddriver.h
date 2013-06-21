@@ -2,6 +2,8 @@
 #define LEDDRIVER_H
 
 #include <QThread>
+#include <Qtime>
+
 #include <Windows.h>
 #include "ftd2xx.h"
 
@@ -12,20 +14,19 @@ public:
     explicit LedDriver(QObject *parent = 0);
     ~LedDriver();
 
-    void setModelingParameters(int startDAC       =    0,
-                               int endDAC         =   11,
-                               int startPort      =    0,
-                               int endPort        =    7,
-                               int startLevel     =    0,
-                               int endLevel       = 4095,
-                               int incrementLevel =   10);
+    void setModelingParameters(int startChannelValue   = 25,
+                               int endChannelValue     = 11,
+                               int levelDecrementValue = 50);
+    void modelingNextChannel();
 
     
 signals:
     void warningMessage(QString title, QString message);
     void performScan();
     void saveData(QString fileName);
+    void saveAllData(QString atualChannel);
     void modelingFinished();
+    void info(QString message);
     
 public slots:
     void stop();
@@ -34,21 +35,19 @@ public slots:
     bool isConnected();
     void enabledModelingContinue();
     bool writeData(const char *txBuffer);
+    bool resetDACs();
 
 private:
     FT_STATUS ftStatus;
     FT_HANDLE ftHandle;
     bool connected;
 
-    int _startDAC;
-    int _endDAC;
-    int _startPort;
-    int _endPort;
-    int _startLevel;
-    int _endLevel;
-    int _incrementLevel;
+    int startChannel;
+    int endChannel;
+    int levelDecrement;
     bool enabledModeling;
     bool enabledContinue;
+    bool nextChannel;
 
     void run();
 };

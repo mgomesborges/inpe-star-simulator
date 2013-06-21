@@ -33,6 +33,8 @@ public:
     int  points();
     double power();
     double integrationTime();
+    double samplesToAverage();
+    double boxCarSmoothing();
     float  purity();
     double* masterData();
     int* wavelength();

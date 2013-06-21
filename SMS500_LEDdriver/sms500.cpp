@@ -212,6 +212,16 @@ double SMS500::integrationTime()
     return resultData.IntgTime;
 }
 
+double SMS500::samplesToAverage()
+{
+    return spectrometer.Channel[channel].Aveg;
+}
+
+double SMS500::boxCarSmoothing()
+{
+    return spectrometer.Channel[channel].BoxCar;
+}
+
 float SMS500::purity()
 {
     return resultData.Purity;
@@ -311,8 +321,8 @@ bool SMS500::isNeedAutoScan()
         satured = false;
     }
 
-    if (((max > spectrometer.Channel[channel].SetMaxCounts) && (resultData.IntgTime != 1.1)) ||
-            ((max < spectrometer.Channel[channel].SetMinCounts) && (resultData.IntgTime != 4000))) {
+    if (((max > spectrometer.Channel[channel].SetMaxCounts) && (spectrometer.Channel[channel].IntTime != 1.1)) ||
+            ((max < spectrometer.Channel[channel].SetMinCounts) && (spectrometer.Channel[channel].IntTime != 4000))) {
         return true;
     }
 
@@ -321,6 +331,18 @@ bool SMS500::isNeedAutoScan()
 
 int SMS500::performAutoRange()
 {
+    short average           = spectrometer.Channel[channel].Aveg;
+    short boxCarSmoothing   = spectrometer.Channel[channel].BoxCar;
+    bool correctDarkCurrent = spectrometer.Channel[channel].CorrDark;
+    bool noiseReduction     = enableNoiseReduction;
+
+
+    // Set Parameters
+    spectrometer.Channel[channel].Aveg = 1;
+    spectrometer.Channel[channel].BoxCar = 0;
+    spectrometer.Channel[channel].CorrDark = false;
+    enableNoiseReduction = false;
+
     // Performs first scan
     if (scanNumber <= 1) {
         GetSpectralData( &spectrometer, &resultData, 0);
@@ -338,11 +360,9 @@ int SMS500::performAutoRange()
             max = maxIntensity();
 
             if (max < spectrometer.Channel[channel].SetMaxCounts) {
-                return range;
+                break;
             }
         }
-
-        range = 0;
     } else { // If Not Satured
         for (; range < MAX_RANGES; ++range) {
             setRange( range );
@@ -351,12 +371,17 @@ int SMS500::performAutoRange()
             max = maxIntensity();
 
             if (max > spectrometer.Channel[channel].SetMaxCounts) {
-                return (range - 1);
+                break;
             }
         }
-
-        range = MAX_RANGES - 1;
+        range -= 1;
     }
+
+    // Reset Parameters
+    spectrometer.Channel[channel].Aveg = average;
+    spectrometer.Channel[channel].BoxCar = boxCarSmoothing;
+    spectrometer.Channel[channel].CorrDark = correctDarkCurrent;
+    enableNoiseReduction = noiseReduction;
 
     return range;
 }

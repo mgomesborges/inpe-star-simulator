@@ -25,7 +25,7 @@ public:
 
     void showData(QPolygonF&, double);
     void showPeak(double, double);
-    void setPlotLimits(double xMin = 300, double xMax = 1200, double yMin = 0, double yMax = 1000);
+    void setPlotLimits(double xMin = 300, double xMax = 1100, double yMin = 0, double yMax = 1000);
 
 private:
     QwtPlotCurve *plotCurve;
