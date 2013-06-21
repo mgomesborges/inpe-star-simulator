@@ -12,20 +12,43 @@ public:
     explicit LedDriver(QObject *parent = 0);
     ~LedDriver();
 
-    bool openConnection();
-    void closeConnection();
-    bool writeData(const char *txBuffer);
+    void setModelingParameters(int startDAC       =    0,
+                               int endDAC         =   11,
+                               int startPort      =    0,
+                               int endPort        =    7,
+                               int startLevel     =    0,
+                               int endLevel       = 4095,
+                               int incrementLevel =   10);
+
     
 signals:
-    void connectionError(QString serialError, QString statusBarMsg);
-    void transmissionError();
+    void warningMessage(QString title, QString message);
+    void performScan();
+    void saveData(QString fileName);
+    void modelingFinished();
     
 public slots:
+    void stop();
+    bool openConnection();
+    void closeConnection();
+    bool isConnected();
+    void enabledModelingContinue();
+    bool writeData(const char *txBuffer);
 
 private:
     FT_STATUS ftStatus;
     FT_HANDLE ftHandle;
-    const char *data;
+    bool connected;
+
+    int _startDAC;
+    int _endDAC;
+    int _startPort;
+    int _endPort;
+    int _startLevel;
+    int _endLevel;
+    int _incrementLevel;
+    bool enabledModeling;
+    bool enabledContinue;
 
     void run();
 };

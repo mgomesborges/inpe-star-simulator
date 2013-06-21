@@ -8,6 +8,10 @@ SMS500::SMS500(QObject *parent, int smsChannel) :
     spectrometer.Channel[channel].MaxSpCounts  = 65535;
     spectrometer.Channel[channel].SetMaxCounts = 52800;
     spectrometer.Channel[channel].SetMinCounts = 24000;
+
+    sleepSingleShot   = false;
+    millisecondsSleep = 0;
+    scanNumber        = 0;
 }
 
 SMS500::~SMS500()
@@ -17,17 +21,23 @@ SMS500::~SMS500()
 
 void SMS500::run()
 {
-    enabledScan     = true;
-    enabledNextScan = false;
     double amplitude;
     int peakWavelength;
-    int scanNumber = 0;
     int integrationTimeIndex = 0;
     bool needAutoScan = true;
 
     ReadSpecDataFile(calibratedDataPath.toAscii().data());
 
+    enabledScan = true;
+    scanNumber  = 0;
+
     while (enabledScan == true) {
+        // Sleep
+        msleep(millisecondsSleep);
+        if (sleepSingleShot == true) {
+            millisecondsSleep = 0;
+        }
+
         scanNumber++;
 
         EnableNoiseReduction(enableNoiseReduction, noiseReductionFator);
@@ -52,14 +62,19 @@ void SMS500::run()
 
         needAutoScan = isNeedAutoScan();
 
+        enabledNextScan = false;
+
         emit scanPerformed(resultData.MasterData, resultData.WaveLength, peakWavelength,
                            amplitude, resultData.Points, scanNumber, integrationTimeIndex, satured);
 
+        // Waiting for SMS500 be ready for next scan
+        while ((enabledScan == true) && (enabledNextScan == false));
+
         if ((numberOfScans != -1) && (scanNumber >= numberOfScans)) {
+            sleepSingleShot   = false;
+            millisecondsSleep = 0;
             break;
         }
-
-        while ((enabledScan == true) && (enabledNextScan == false));
     }
 
     emit scanFinished();
@@ -67,7 +82,9 @@ void SMS500::run()
 
 void SMS500::stop()
 {
-    enabledScan = false;
+    enabledScan       = false;
+    sleepSingleShot   = false;
+    millisecondsSleep = 0;
 }
 
 void SMS500::setOperationMode(const QString &mode)
@@ -147,6 +164,32 @@ int SMS500::dominanteWavelength()
 int SMS500::peakWavelength()
 {
     return resultData.Peakwave;
+}
+
+double SMS500::maxIntensity()
+{
+    double max = 0;
+
+    for (int i = 0; i < resultData.Points; i++) {
+        if (max < resultData.PixelValues[i]) {
+            max = resultData.PixelValues[i];
+        }
+    }
+
+    return max;
+}
+
+double SMS500::maxMasterData()
+{
+    double max = 0;
+
+    for (int i = 0; i < resultData.Points; i++) {
+        if (max < resultData.MasterData[i]) {
+            max = resultData.MasterData[i];
+        }
+    }
+
+    return max;
 }
 
 int SMS500::fwhm()
@@ -245,7 +288,7 @@ bool SMS500::openConnection()
 void SMS500::closeConnection()
 {
     stop();
-    wait();
+    wait(1000);
     CloseSpectrometer();
     spectrometer.Channel[channel].SpectType = SPEC_NOT_FOUND; //Spectrometer hardware not connected
 }
@@ -260,13 +303,7 @@ bool SMS500::isConnected()
 
 bool SMS500::isNeedAutoScan()
 {
-    double max = 0;
-
-    for (int i = 0; i < resultData.Points; i++) {
-        if (max < resultData.PixelValues[i]) {
-            max = resultData.PixelValues[i];
-        }
-    }
+    double max = maxIntensity();
 
     if (max > spectrometer.Channel[channel].SetMaxCounts) {
         satured = true;
@@ -275,7 +312,7 @@ bool SMS500::isNeedAutoScan()
     }
 
     if (((max > spectrometer.Channel[channel].SetMaxCounts) && (resultData.IntgTime != 1.1)) ||
-        ((max < spectrometer.Channel[channel].SetMinCounts) && (resultData.IntgTime != 4000))) {
+            ((max < spectrometer.Channel[channel].SetMinCounts) && (resultData.IntgTime != 4000))) {
         return true;
     }
 
@@ -284,30 +321,59 @@ bool SMS500::isNeedAutoScan()
 
 int SMS500::performAutoRange()
 {
-    double max;
-
-    for (int i = 1; i < MAX_RANGES; i++) {
-        setRange(i);
+    // Performs first scan
+    if (scanNumber <= 1) {
         GetSpectralData( &spectrometer, &resultData, 0);
+    }
 
-        max = 0;
+    double max = maxIntensity();
+    int range  = spectrometer.Channel[channel].Range;
 
-        for (int j = 0; j < resultData.Points; j++) {
-            if (max < resultData.PixelValues[j]) {
-                max = resultData.PixelValues[j];
+    // If Satured
+    if (max > spectrometer.Channel[channel].SetMaxCounts) {
+        for (; range > 0; --range) {
+            setRange( range );
+            GetSpectralData( &spectrometer, &resultData, 0);
+
+            max = maxIntensity();
+
+            if (max < spectrometer.Channel[channel].SetMaxCounts) {
+                return range;
             }
         }
 
-        // Satured
-        if (max > spectrometer.Channel[channel].SetMaxCounts) {
-            return (i - 1);
+        range = 0;
+    } else { // If Not Satured
+        for (; range < MAX_RANGES; ++range) {
+            setRange( range );
+            GetSpectralData( &spectrometer, &resultData, 0);
+
+            max = maxIntensity();
+
+            if (max > spectrometer.Channel[channel].SetMaxCounts) {
+                return (range - 1);
+            }
         }
+
+        range = MAX_RANGES - 1;
     }
 
-    return (MAX_RANGES -1);
+    return range;
 }
 
 void SMS500::enableNextScan()
 {
     enabledNextScan = true;
+}
+
+void SMS500::setWaitTimeForScan(unsigned long milliseconds)
+{
+    sleepSingleShot   = false;
+    millisecondsSleep = milliseconds;
+}
+
+void SMS500::setWaitTimeForScanSingleShot(unsigned long milliseconds)
+{
+    sleepSingleShot   = true;
+    millisecondsSleep = milliseconds;
 }

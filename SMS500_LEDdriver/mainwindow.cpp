@@ -12,8 +12,6 @@
 
 #include "leddriver.h"
 
-#include <QTime>
-
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -36,7 +34,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ledDriver = new LedDriver(this);
 
     mStatusLabel = new QLabel;
-    QMainWindow::statusBar()->addPermanentWidget( mStatusLabel );
+    statusBar()->addPermanentWidget( mStatusLabel );
 
     sms500SignalAndSlot();
     ledDriverSignalAndSlot();
@@ -44,8 +42,6 @@ MainWindow::MainWindow(QWidget *parent) :
 
 MainWindow::~MainWindow()
 {
-    //    sms500->closeConnection();
-    //    ledDriver->closeConnection();
     delete ui;
 }
 
@@ -72,48 +68,55 @@ void MainWindow::resizeEvent(QResizeEvent *)
 void MainWindow::showInfo(const QString &text)
 {
     if (text == QString::null) {
-        if (plot->plotPicker->rubberBand())
+        if (plot->plotPicker->rubberBand()) {
             statusBar()->showMessage(tr("Cursor Pos: Press left mouse button in plot region"));
-        else
+        } else {
             statusBar()->showMessage(tr("Zoom: Press mouse button and drag"));
+        }
     }
+}
+
+void MainWindow::warningMessage(QString title, QString message)
+{
+    QMessageBox::warning(this, title, message);
 }
 
 void MainWindow::ledDriverConnectDisconnect()
 {
-    ledDriver->start();
+    if (ui->btnConnectDisconnectLED->text().contains(tr("Connect"))) {
 
-//    if (ui->btnConnectDisconnectLED->text().contains(tr("Connect"))) {
-//        ui->btnConnectDisconnectLED->setText(tr("Disconnect"));
-//        ui->btnConnectDisconnectLED->setIcon(QIcon(":/pics/disconnect.png"));
+        // Prevents communnication errors
+        ledDriver->closeConnection();
 
-//        // Prevents communnication errors
-//        ledDriver->closeConnection();
+        if (ledDriver->openConnection() == true) {
+            ui->btnConnectDisconnectLED->setText(tr("Disconnect"));
+            ui->btnConnectDisconnectLED->setIcon(QIcon(":/pics/disconnect.png"));
 
-//        if (ledDriver->openConnection() == true) {
-//            // Configure DACs
-//            ledDriverDac04Changed();
-//            ledDriverDac05Changed();
-//            ledDriverDac06Changed();
-//            ledDriverDac07Changed();
-//            ledDriverDac08Changed();
-//            ledDriverDac09Changed();
-//            ledDriverDac10Changed();
-//            ledDriverDac11Changed();
-//            ledDriverDac12Changed();
-//        }
-//    } else {
-//        ledDriver->closeConnection();
-//        ui->btnConnectDisconnectLED->setText(tr("Connect"));
-//        ui->btnConnectDisconnectLED->setIcon(QIcon(":/pics/reconnect.png"));
-//    }
+            // Configure DACs
+            ledDriverDac04Changed();
+            ledDriverDac05Changed();
+            ledDriverDac06Changed();
+            ledDriverDac07Changed();
+            ledDriverDac08Changed();
+            ledDriverDac09Changed();
+            ledDriverDac10Changed();
+            ledDriverDac11Changed();
+            ledDriverDac12Changed();
+        } else {
+            QMessageBox::warning(this, tr("LED Driver Error"), tr("LED Driver Open Comunication Error"));
+        }
+    } else {
+        ledDriver->closeConnection();
+        ui->btnConnectDisconnectLED->setText(tr("Connect"));
+        ui->btnConnectDisconnectLED->setIcon(QIcon(":/pics/reconnect.png"));
+    }
 }
 
 void MainWindow::ledDriverConnectionError(QString serialError, QString statusBarMsg)
 {
     ui->btnConnectDisconnectLED->setText(tr("Connect"));
     ui->btnConnectDisconnectLED->setIcon(QIcon(":/pics/reconnect.png"));
-    ui->statusBar->showMessage(statusBarMsg);
+    statusBar()->showMessage(statusBarMsg);
     QMessageBox::warning(this, tr("Error"), serialError);
 }
 
@@ -258,126 +261,103 @@ void MainWindow::ledDriverConfigureDac(char dac)
         txBuffer[9] = '\0';
 
         if (ledDriver->writeData(txBuffer) == false) {
-            ui->statusBar->showMessage("Transmission Error: check USB connection and try again!", 5000);
+            statusBar()->showMessage("Transmission Error: check USB connection and try again!", 5000);
             break;
         }
-        ledDriver->wait();
     }
 }
 
 void MainWindow::ledModeling()
 {
-    QString filePath = QFileDialog::getExistingDirectory(this, tr("Choose the directory to save Save Led Modeling Data"), QDir::homePath());
+    if (ui->btnLedModeling->text().contains("LED Modeling") == true) {
+        ledModelingFilePath = QFileDialog::getExistingDirectory(this, tr("Choose the directory to save Save Led Modeling Data"), QDir::homePath());
 
-    if (filePath.isEmpty()) {
-        return;
-    }
-
-    // SMS500 Configure
-    if (sms500->isConnected() == false) {
-        if (sms500Connect() == false) {
+        if (ledModelingFilePath.isEmpty()) {
             return;
         }
-    }
 
-    sms500->stop();
-
-    // Operation Mode
-    QString operationMode("Flux");
-    QString calibratedDataPath("Flux.dat");
-
-    sms500->setOperationMode(operationMode);
-    sms500->setCalibratedDataPath(calibratedDataPath);
-
-    // Parameters
-    sms500->setAutoRange(false);
-    sms500->setRange(ui->integrationTimeComboBox->currentIndex());
-    sms500->setBoxCarSmoothing(ui->smoothingSpinBox->value());
-    sms500->setAverage(ui->samplesToAverageSpinBox->value());
-    sms500->setStartWave(ui->startWaveLineEdit->text().toInt());
-    sms500->setStopWave(ui->stopWaveLineEdit->text().toInt());
-    sms500->setCorrecDarkCurrent(ui->dynamicDarkCheckBox->isChecked());
-    sms500->setNoiseReduction(ui->noiseReductionCheckBox->isChecked(), ui->noiseReductionLineEdit->text().toDouble());
-    sms500->setNumberOfScans(1);
-
-    // LED Driver Connection
-    if (ledDriver->openConnection() == false) {
-        return;
-    }
-
-    QTime time1;
-    time1.start();
-
-    // For DAC4 to DAC 12
-    for (int dac = 5; dac < 6; dac++) {
-
-        // For Port1 to Port8
-        for (int port = 7; port < 8; port++) {
-
-            // RESET Port1 to Port8
-            valueOfPort[0] = 0;
-            valueOfPort[1] = 0;
-            valueOfPort[2] = 0;
-            valueOfPort[3] = 0;
-            valueOfPort[4] = 0;
-            valueOfPort[5] = 0;
-            valueOfPort[6] = 0;
-            valueOfPort[6] = 0;
-
-            // For Digital Level 0 to 4095
-            for (int level = 0; level < 4096; level += 100) {
-
-                // LED Driver configure
-                valueOfPort[port] = level;
-                ledDriverConfigureDac( 5 ); // DAC 6
-                ledDriver->wait();
-
-                // Starts timeout for LED Modeling
-                time1.restart();
-                while (time1.elapsed() < 1000) {
-                    ui->statusBar->showMessage(QString::number(time1.elapsed()), 1000);
-                }
-
-                // Performs Scan with SMS500
-                sms500->start();
-                sms500->wait();
-                statusBar()->showMessage(tr("Geting Spectral Data :: Level: %1").arg(level), 1000);
-
-                // Saves result
-                saveLedModelingData(filePath + tr("/channel%1_%2nd.txt").arg(dac * 8 + port + 1).arg(level));
+        // SMS500 Configure
+        if (sms500->isConnected() == false) {
+            if (sms500Connect() == false) {
+                return;
             }
         }
-    }
 
-    statusBar()->showMessage(tr("LED Modeling Complete"), 5000);
+        // Set Operation Mode to Flux
+        ui->rbtnFlux->setChecked(true);
+
+        // Parameters
+        ui->AutoRangeCheckBox->setChecked(true);
+        ui->numberOfScansLineEdit->setText("1");
+
+        sms500Configure();
+
+        // LED Driver Connection
+        if (ledDriver->isConnected() == false) {
+            ledDriverConnectDisconnect();
+        }
+
+        int startDAC   = ui->startDAC->text().toInt();
+        int endDAC     = ui->endDAC->text().toInt();
+        int startPort  = ui->startPort->text().toInt();
+        int endPort    = ui->endPort->text().toInt();
+        int startLevel = ui->startLevel->text().toInt();
+        int endLevel   = ui->endLevel->text().toInt();
+        int levelInc   = ui->levelIncrement->text().toInt();
+
+        ledDriver->setModelingParameters(startDAC, endDAC, startPort, endPort, startLevel, endLevel, levelInc);
+
+        ui->btnLedModeling->setText("STOP Modeling");
+
+        scanNumberOfLedModeling = 0;
+
+        ledDriver->start();
+    } else {
+        ledDriver->stop();
+        ledDriver->wait(3000);
+        ui->btnLedModeling->setText("LED Modeling");
+    }
 }
 
-void MainWindow::saveLedModelingData(QString filePath)
+void MainWindow::ledModelingPerformScan()
 {
-    qDebug() << filePath;
-    using namespace std;
+    scanNumberOfLedModeling++;
+    ui->scanNumberLabel->setText(tr("    Scan number: %1").arg(scanNumberOfLedModeling));
+    ui->scanNumberLabel_2->setText(tr("    Scan number: %1").arg(scanNumberOfLedModeling));
+    statusBar()->showMessage(tr("LED Modeling Perform Scan %1").arg(scanNumberOfLedModeling));
+
+    sms500->start();
+}
+
+void MainWindow::ledModelingSaveData(QString fileName)
+{
+    // Stop Condition
+    if (sms500->maxMasterData() <= 5) {
+        ledDriver->stop();
+    }
+
+    QString filePath(ledModelingFilePath + fileName);
+
     // ofstream constructor opens file
-    ofstream outFile( filePath.toAscii().data(), ios::out );
+    std::ofstream outFile( filePath.toAscii().data(), std::ios::out );
 
     // exit program if unable to create file
     if ( !outFile ) // overloaded ! operator
     {
-        statusBar()->showMessage( tr("File could not be create") );
-        exit(1);
+        QMessageBox::warning(this, tr("Save Modeling Data Error"), tr("File could not be create"));
+        return;
     }
 
-    outFile << "Start wavelength:\t" << sms500->startWavelength() << endl;
-    outFile << "Stop wavelength:\t" << sms500->stopWavelength() << endl;
-    outFile << "Dominate wavelength:\t" << sms500->dominanteWavelength() << endl;
-    outFile << "Peak wavelength:\t" << sms500->peakWavelength() << endl;
-    outFile << "Power (W):\t\t" << sms500->power() << endl;
-    outFile << "Integration time (ms):\t" << sms500->integrationTime() << endl;
-    outFile << "Purity:\t\t\t" << sms500->purity() << endl;
-    outFile << "FWHM:\t\t\t" << sms500->fwhm() << endl;
-    outFile << "\nHolds the Wavelength Data:" << endl;
-    outFile << "nm\tuW/nm" << endl;
-
-    QString number;
+    outFile << "Start wavelength:\t" << sms500->startWavelength() << std::endl;
+    outFile << "Stop wavelength:\t" << sms500->stopWavelength() << std::endl;
+    outFile << "Dominate wavelength:\t" << sms500->dominanteWavelength() << std::endl;
+    outFile << "Peak wavelength:\t" << sms500->peakWavelength() << std::endl;
+    outFile << "Power (W):\t\t" << sms500->power() << std::endl;
+    outFile << "Integration time (ms):\t" << sms500->integrationTime() << std::endl;
+    outFile << "Purity:\t\t\t" << sms500->purity() << std::endl;
+    outFile << "FWHM:\t\t\t" << sms500->fwhm() << std::endl;
+    outFile << "\nHolds the Wavelength Data:" << std::endl;
+    outFile << "nm\tuW/nm" << std::endl;
 
     double *masterData;
     int    *waveLength;
@@ -387,14 +367,21 @@ void MainWindow::saveLedModelingData(QString filePath)
 
     for (int i = 0; i < sms500->points(); i++) {
         if (masterData[i] < 0) {
-            number = QString("0");
+            outFile << waveLength[ i ] << "\t" << "0.0" << std::endl;
         } else {
-            number = QString::number(masterData[i]);
-            number.replace(".", ",");
+            outFile << waveLength[ i ] << "\t" << masterData[i] << std::endl;
         }
-
-        outFile << waveLength[ i ] << "\t" << number.toAscii().data() << endl;
     }
+
+    outFile.close();
+
+    ledDriver->enabledModelingContinue();
+}
+
+void MainWindow::ledModelingFinished()
+{
+    ui->btnLedModeling->setText("LED Modeling");
+    QMessageBox::warning(this, tr("LED Modeling finished"), tr("Press Ok to continue"));
 }
 
 void MainWindow::sms500Configure()
@@ -554,12 +541,6 @@ void MainWindow::startStopScan()
 
 void MainWindow::performScan()
 {
-    //    if (sms500->isConnected() == false) {
-    //        if (sms500Connect() == false) {
-    //            return;
-    //        }
-    //    }
-
     statusBar()->showMessage(tr("Geting Spectral Data"), 5000);
     sms500Configure();
     sms500->start();
@@ -601,7 +582,6 @@ void MainWindow::plotScanResult(const double *masterData, const int *wavelegth, 
     }
 
     ui->scanNumberLabel->setText(tr("    Scan number: %1").arg(scanNumber));
-    ui->scanNumberLabel_2->setText(tr("    Scan number: %1").arg(scanNumber));
 
     if (satured == true) {
         ui->saturedLabel->show();
@@ -611,7 +591,7 @@ void MainWindow::plotScanResult(const double *masterData, const int *wavelegth, 
         ui->saturedLabel_2->hide();
     }
 
-    statusBar()->showMessage(tr("Geting Spectral Data"), 5000);
+//    statusBar()->showMessage(tr("Geting Spectral Data"), 5000);
     sms500Configure();
     sms500->enableNextScan();
 }
@@ -622,9 +602,6 @@ void MainWindow::scanFinished()
     ui->btnZoom->setEnabled(true);
     ui->btnStartScan->setIcon(QIcon(":/pics/start.png"));
     ui->btnStartScan->setText("Start Scan");
-
-    sms500->stop();
-    sms500->wait();
 }
 
 void MainWindow::saveScanData()
@@ -646,18 +623,16 @@ void MainWindow::saveScanData()
         exit(1);
     }
 
-    outFile << "Start wavelength:\t" << sms500->startWavelength() << endl;
-    outFile << "Stop wavelength:\t" << sms500->stopWavelength() << endl;
-    outFile << "Dominate wavelength:\t" << sms500->dominanteWavelength() << endl;
-    outFile << "Peak wavelength:\t" << sms500->peakWavelength() << endl;
-    outFile << "Power (W):\t\t" << sms500->power() << endl;
-    outFile << "Integration time (ms):\t" << sms500->integrationTime() << endl;
-    outFile << "Purity:\t\t\t" << sms500->purity() << endl;
-    outFile << "FWHM:\t\t\t" << sms500->fwhm() << endl;
-    outFile << "\nHolds the Wavelength Data:" << endl;
-    outFile << "nm\tuW/nm" << endl;
-
-    QString number;
+    outFile << "Start wavelength:\t" << sms500->startWavelength() << std::endl;
+    outFile << "Stop wavelength:\t" << sms500->stopWavelength() << std::endl;
+    outFile << "Dominate wavelength:\t" << sms500->dominanteWavelength() << std::endl;
+    outFile << "Peak wavelength:\t" << sms500->peakWavelength() << std::endl;
+    outFile << "Power (W):\t\t" << sms500->power() << std::endl;
+    outFile << "Integration time (ms):\t" << sms500->integrationTime() << std::endl;
+    outFile << "Purity:\t\t\t" << sms500->purity() << std::endl;
+    outFile << "FWHM:\t\t\t" << sms500->fwhm() << std::endl;
+    outFile << "\nHolds the Wavelength Data:" << std::endl;
+    outFile << "nm\tuW/nm" << std::endl;
 
     double *masterData;
     int    *waveLength;
@@ -667,16 +642,13 @@ void MainWindow::saveScanData()
 
     for (int i = 0; i < sms500->points(); i++) {
         if (masterData[i] < 0) {
-            number = QString("0");
+            outFile << waveLength[ i ] << "\t" << "0.0" << std::endl;
         } else {
-            number = QString::number(masterData[i]);
-            number.replace(".", ",");
+            outFile << waveLength[ i ] << "\t" << masterData[i] << std::endl;
         }
-
-        outFile << waveLength[ i ] << "\t" << number.toAscii().data() << endl;
     }
 
-    QMainWindow::statusBar()->showMessage("Log gerado com sucess!", 5000);
+    statusBar()->showMessage("Log gerado com sucess!", 5000);
 }
 
 void MainWindow::systemZero()
@@ -690,21 +662,21 @@ void MainWindow::systemZero()
         }
     }
 
-    sms500Configure();
-
     if (QMessageBox::question(this, tr("Sytem Zero"),
-                              tr("Set the SMS-500 for Dark Current Reading."),
+                              tr("Set the SMS-500 for Dark Current Reading.\n\nThis can take several seconds."),
                               tr("Yes"), tr("No") )) {
         return;
     }
 
+    statusBar()->showMessage(tr("Running System Zero :: Please wait!"));
+    sms500Configure();
     sms500->creatDarkRatioArray();
+
+    QMessageBox::information( this, tr("SMS500 Info"), tr("System Zero Completed.") );
 }
 
 void MainWindow::calibrateSystem()
 {
-    systemZero();
-
     if (QMessageBox::question(this, tr("Master Spectrometer Calibration"),
                               tr("Spectrometer Calibration Procedure.\n\n"
                                  "This requires the user to follow the procedure that is outlined in the software.\n"
@@ -723,27 +695,36 @@ void MainWindow::calibrateSystem()
     }
 
     if (sms500->readCalibratedLamp(lampFile) == false) {
-        statusBar()->showMessage("Error trying to open calibration file");
+        statusBar()->showMessage("Error trying to open calibration file", 10000);
         return;
     }
 
-    statusBar()->showMessage("Performing calibration, please wait", 10);
-
-    sms500->startLampScan();
-
-
-    if (QMessageBox::question(this, tr("Sytem Zero"),
-                              tr("Set the SMS-500 for Dark Current Reading. To continue with calibration,\n"
+    if (QMessageBox::question(this, tr("Calibration Setup"),
+                              tr("Please Setup the SMS500 for data acquisition...\n\n"
+                                 "Turn on the calibration lamp and wait approximately 3 minutes\n"
+                                 "for the lamp to stabilize.\n\n"
+                                 "To continue with calibration,\n"
                                  "click on the 'YES' button, 'No' to cancel"),
                               tr("Yes"), tr("No") )) {
         return;
     }
 
+    statusBar()->showMessage("Running calibration :: Please wait!", 5000);
+
+    sms500->startLampScan();
+
+    if (QMessageBox::question(this, tr("Sytem Zero"),
+                              tr("Set the SMS-500 for Dark Current Reading. To continue with calibration,\n"
+                                 "turn off the calibrated lamp, then click on the 'YES' button, 'No' to cancel"),
+                              tr("Yes"), tr("No") )) {
+        return;
+    }
+
+    statusBar()->showMessage("Running calibration :: Please wait!", 5000);
+
     sms500->finishLampScan();
 
-    QMessageBox::question(this, tr("Calibration Completed"),
-                          tr("System calibration completed..."),
-                          tr("Ok"));
+    QMessageBox::information(this, tr("SMS500 Info"), tr("System calibration completed."));
 }
 
 void MainWindow::moved( const QPoint &pos )
@@ -793,10 +774,17 @@ void MainWindow::sms500SignalAndSlot()
 
 void MainWindow::ledDriverSignalAndSlot()
 {
-    connect(ui->btnConnectDisconnectLED, SIGNAL(clicked()), this, SLOT(ledDriverConnectDisconnect()));
     connect(ledDriver, SIGNAL(connectionError(QString, QString)), this, SLOT(ledDriverConnectionError(QString, QString)));
+    connect(ledDriver, SIGNAL(warningMessage(QString,QString)),   this, SLOT(warningMessage(QString,QString)));
 
-    connect(ui->btnLedModeling, SIGNAL(clicked()), this, SLOT(ledModeling()));
+    connect(ledDriver, SIGNAL(performScan()),      this, SLOT(ledModelingPerformScan()));
+    connect(ledDriver, SIGNAL(saveData(QString)),  this, SLOT(ledModelingSaveData(QString)));
+    connect(ledDriver, SIGNAL(modelingFinished()), this, SLOT(ledModelingFinished()));
+
+    connect(ui->btnConnectDisconnectLED, SIGNAL(clicked()),      this,      SLOT(ledDriverConnectDisconnect()));
+    connect(ui->btnLedModeling,          SIGNAL(clicked()),      this,      SLOT(ledModeling()));
+    connect(sms500,                      SIGNAL(scanFinished()), ledDriver, SLOT(enabledModelingContinue()));
+
 
     connect(ui->dac04channel25, SIGNAL(editingFinished()), this, SLOT(ledDriverDac04Changed()));
     connect(ui->dac04channel26, SIGNAL(editingFinished()), this, SLOT(ledDriverDac04Changed()));

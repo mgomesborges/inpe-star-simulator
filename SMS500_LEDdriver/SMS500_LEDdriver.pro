@@ -6,6 +6,8 @@
 
 QT       += core gui
 
+CONFIG += serialport
+
 TARGET   = SMS500_LEDdriver
 TEMPLATE = app
 

@@ -29,6 +29,8 @@ private:
     LedDriver *ledDriver;
     int  valueOfPort[8];
     char txBuffer[256];
+    QString ledModelingFilePath;
+    int scanNumberOfLedModeling;
 
     void resizeEvent(QResizeEvent *);
 
@@ -39,9 +41,9 @@ private:
 
     void ledDriverSignalAndSlot();
     void ledDriverConfigureDac(char dac);
-    void saveLedModelingData(QString filePath);
 
 private slots:
+    void warningMessage(QString title, QString message);
     void aboutThisSoftware();
     void aboutSMS500();
 
@@ -75,6 +77,9 @@ private slots:
     void ledDriverDac11Changed();
     void ledDriverDac12Changed();
     void ledModeling();
+    void ledModelingPerformScan();
+    void ledModelingSaveData(QString fileName);
+    void ledModelingFinished();
 };
 
 #endif // MAINWINDOW_H

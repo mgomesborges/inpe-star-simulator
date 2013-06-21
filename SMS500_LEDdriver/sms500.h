@@ -42,6 +42,8 @@ public:
     double coefficient2();
     double coefficient3();
     double intercept();
+    double maxIntensity();
+    double maxMasterData();
     bool readCalibratedLamp(const QString &path);
     void startLampScan();
     void finishLampScan();
@@ -52,6 +54,8 @@ public:
     bool isNeedAutoScan();
     int  performAutoRange();
     void enableNextScan();
+    void setWaitTimeForScan(unsigned long milliseconds);
+    void setWaitTimeForScanSingleShot(unsigned long milliseconds);
 
 private:
     void run();
@@ -74,7 +78,11 @@ private:
     bool satured;
     bool autoRange;
     int numberOfScans;
+    int scanNumber;
     int channel;
+
+    unsigned long millisecondsSleep;
+    bool sleepSingleShot;
 };
 
 #endif // SMS500_H
