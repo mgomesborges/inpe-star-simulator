@@ -1,0 +1,11 @@
+<RCC>
+    <qresource prefix="/">
+        <file>pics/zoom-fit.png</file>
+        <file>pics/disconnect.png</file>
+        <file>pics/reconnect.png</file>
+        <file>pics/start.png</file>
+        <file>pics/stop.png</file>
+        <file>pics/save.png</file>
+        <file>pics/logo.png</file>
+    </qresource>
+</RCC>

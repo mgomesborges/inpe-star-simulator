@@ -1,0 +1,57 @@
+# Exemplo de como ignorar arquivos no repositório
+#
+# *.[oa]	# ignora arquivos terminados em .o ou .a
+# *.a		# ignora arquivos terminados em .a
+# !lib.a	# rastreia lib.a, mesmo que esteja ignorando arquivos .a
+# /TODO		# ignora somente o diretório raiz TODO, mas não subdir/TODO
+# build/	# ignora todos os arquivos no diretório build/
+# doc/*.txt	# ignora doc/arquivo.txt, mas não doc/diretorio/arquivo.txt
+
+##################################################
+# Arquivos gerados pelo SO
+##################################################
+# Mac config file
+._*
+*~
+.DS_Store
+.DS_Store?
+.Spotlight-V100
+.Trashes
+Icon?
+*.user
+
+# Windows image file caches
+Thumbs.db
+ehthumbs.db
+
+# Folder config file
+Desktop.ini
+
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+
+##################################################
+# Arquivos de Compilação em C / C++
+##################################################
+
+# Compiled Object files
+# *.slo
+# *.lo
+# *.o
+
+# Compiled Dynamic libraries
+# *.so
+# *.so.*
+# *.lib
+# *.dylib
+
+# Compiled Static libraries
+# *.lai
+# *.la
+# *.a
+
+# Executables
+# *.exe
+# *.out
+# *.app
