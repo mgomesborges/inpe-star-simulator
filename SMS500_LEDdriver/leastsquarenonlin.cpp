@@ -73,21 +73,53 @@ void LeastSquareNonLin::run()
 
     // Initial Solution
     for (int i = 0; i < 71; i++) {
-        x(i) = 2000;
+        xCurrent(i) = 2000;
     }
 
     Matrix<double, Dynamic, Dynamic> I;
     Matrix<double, Dynamic, Dynamic> temp;
-
-    double alpha = 0.000001;
+    Matrix<int, 71, 1> xPrevious;
+    double fxPrevious;
+    double fxCurrent;
+    int stopCriteria = 0;
+    double alpha = getAlpha( 0 );
 
     for (int i = 0; i < 500; i++) {
-        jacobian(x);
+        // Objective Function
+        emit performScan();
+        enabledToContinue = false;
+        while ( enabledToContinue == false ) {
+            qDebug() << "Waiting";
+        }
+
+        temp       = objectiveFunction.array().pow(2);
+        fxPrevious = sqrt( temp.sum() );
+
+        jacobian(xCurrent);
 
         // Diagonal Matrix
         I = J.transpose() * J;
         temp = I.diagonal();
         I = temp.asDiagonal();
+
+        temp = (J.transpose() * J + alpha * I);
+        temp = temp.inverse() * J.transpose() * objectiveFunction;
+
+        // Updates the value of x
+        xPrevious  = xCurrent;
+
+        for (int row = 0; row < xCurrent.rows(); row++) {
+            xCurrent(row) = xCurrent(row) + round(temp(row));
+
+            // Impose a bounds constraints
+            if (xCurrent(row) > 4095) {
+                xCurrent(row) = 4095;
+            }
+
+            if (xCurrent(row) < 0) {
+                xCurrent(row) = 0;
+            }
+        }
 
         // Objective Function
         emit performScan();
@@ -96,19 +128,21 @@ void LeastSquareNonLin::run()
             qDebug() << "Waiting";
         }
 
-        temp = (J.transpose() * J + alpha * I);
-        temp = temp.inverse() * J.transpose() * objectiveFunction;
+        temp       = objectiveFunction.array().pow(2);
+        fxCurrent  = sqrt( temp.sum() );
 
-        for (int row = 0; row < x.rows(); row++) {
-            x(row) = x(row) + round(temp(row));
+        if (fxCurrent >= fxPrevious) {
+            xCurrent = xPrevious;
+            alpha    = getAlpha( fxPrevious );
+            stopCriteria++;
 
-            if (x(row) > 4095) {
-                x(row) = 4095;
+            if (stopCriteria == 3) {
+                emit info(tr("Least Square Finished"));
+                return;
             }
-
-            if (x(row) < 0) {
-                x(row) = 0;
-            }
+        } else {
+            stopCriteria = 0;
+            emit info(tr("f(x): %1").arg(fxCurrent));
         }
 
         if (stopThread == true) {
@@ -162,7 +196,114 @@ void LeastSquareNonLin::setObjectiveFunction(Matrix<double, Dynamic, Dynamic> va
 
 Matrix<int, 71, 1> LeastSquareNonLin::getSolution()
 {
-    return x;
+    return xCurrent;
+}
+
+double LeastSquareNonLin::getAlpha(double bestFx)
+{
+    Matrix<double, Dynamic, Dynamic> I;
+    Matrix<double, Dynamic, Dynamic> temp;
+    Matrix<int, 71, 1> xBackup;
+    Matrix<int, 71, 1> x0;
+    Matrix<int, 71, 1> x1;
+    double fx0;
+    double fx1;
+    double alpha = 1e-1;
+    double alphaPrevious;
+
+    xBackup = xCurrent;
+
+    while (true) {
+        // Objective Function
+        emit performScan();
+        enabledToContinue = false;
+        while ( enabledToContinue == false ) {
+            qDebug() << "Waiting";
+        }
+
+        // x0 --------------------------------
+        jacobian(xCurrent);
+
+        // Diagonal Matrix
+        I = J.transpose() * J;
+        temp = I.diagonal();
+        I = temp.asDiagonal();
+
+        temp = (J.transpose() * J + alpha * I);
+        temp = temp.inverse() * J.transpose() * objectiveFunction;
+
+        // Updates the value of x0
+        for (int row = 0; row < x0.rows(); row++) {
+            x0(row) = xCurrent(row) + round(temp(row));
+
+            // Impose a bounds constraints
+            if (x0(row) > 4095) {
+                x0(row) = 4095;
+            }
+
+            if (x0(row) < 0) {
+                x0(row) = 0;
+            }
+        }
+
+        // New value for alpha
+        alphaPrevious = alpha;
+        alpha         = alpha + 1e-1;
+
+        // x1 --------------------------------
+        temp = (J.transpose() * J + alpha * I);
+        temp = temp.inverse() * J.transpose() * objectiveFunction;
+
+        // Updates the value of x1
+        for (int row = 0; row < x1.rows(); row++) {
+            x1(row) = xCurrent(row) + round(temp(row));
+
+            // Impose a bounds constraints
+            if (x1(row) > 4095) {
+                x1(row) = 4095;
+            }
+
+            if (x1(row) < 0) {
+                x1(row) = 0;
+            }
+        }
+
+        // fx0 --------------------------------
+        xCurrent = x0;
+
+        // Objective Function
+        emit performScan();
+        enabledToContinue = false;
+        while ( enabledToContinue == false ) {
+            qDebug() << "Waiting";
+        }
+
+        temp = objectiveFunction.array().pow(2);
+        fx0  = sqrt( temp.sum() );
+
+        // fx1 --------------------------------
+        xCurrent = x1;
+
+        // Objective Function
+        emit performScan();
+        enabledToContinue = false;
+        while ( enabledToContinue == false ) {
+            qDebug() << "Waiting";
+        }
+
+        temp = objectiveFunction.array().pow(2);
+        fx1  = sqrt( temp.sum() );
+
+        // Reset xCurrent
+        xCurrent = xBackup;
+
+        // Stopping criteria
+        if (fx1 > fx0) {
+            return alphaPrevious;
+        }
+
+        emit info(tr("f(x): %1 :: Getting Alpha: f(x): %2, alpha: %3").arg(bestFx).arg(fx1).arg(alpha));
+    }
 }
 
 void LeastSquareNonLin::stop()

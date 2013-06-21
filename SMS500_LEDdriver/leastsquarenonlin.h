@@ -33,6 +33,7 @@ public slots:
     void jacobian(Matrix<int, 71, 1> x0);
     void setObjectiveFunction(Matrix<double, Dynamic, Dynamic> value);
     Matrix<int, 71, 1> getSolution();
+    double getAlpha(double bestFx);
     
 private:
     bool initialized;
@@ -42,7 +43,7 @@ private:
     Matrix<double, 1, 71> minimumDigitalLevel;
     Matrix< Matrix<double, Dynamic, Dynamic>, 1, 71> derivatives;
 
-    Matrix<int, 71, 1> x;
+    Matrix<int, 71, 1> xCurrent;
     Matrix<double, 641, 71> J;
     Matrix<double, 641, 1> objectiveFunction;
 

@@ -45,15 +45,15 @@ MainWindow::MainWindow(QWidget *parent) :
     // Star
     star = new Star(this);
     star->setMagnitude("0");
-    star->setTemperature("20000");
+    star->setTemperature("7500");
 
     connect(ui->actionStar_Settings, SIGNAL(triggered(bool)), this, SLOT(starSettings()));
     connect(ui->actionLeast_Square, SIGNAL(triggered(bool)), this, SLOT(leastSquare()));
 
     lsqnonlin = new LeastSquareNonLin(this);
-    connect(lsqnonlin, SIGNAL(info(QString)), this, SLOT(statusBarMessage(QString)));
-    connect(lsqnonlin, SIGNAL(performScan()), this, SLOT(leastSquarePerformScan()));
-    connect(sms500, SIGNAL(scanFinished()), this, SLOT(leastSquareObjectiveFunction()));
+//    connect(lsqnonlin, SIGNAL(info(QString)), this, SLOT(statusBarMessage(QString)));
+//    connect(lsqnonlin, SIGNAL(performScan()), this, SLOT(leastSquarePerformScan()));
+//    connect(sms500, SIGNAL(scanFinished()), this, SLOT(leastSquareObjectiveFunction()));
 
 
     sms500SignalAndSlot();
@@ -533,6 +533,10 @@ void MainWindow::starSettings()
 
 void MainWindow::leastSquare()
 {
+    connect(lsqnonlin, SIGNAL(info(QString)), this, SLOT(statusBarMessage(QString)));
+    connect(lsqnonlin, SIGNAL(performScan()), this, SLOT(leastSquarePerformScan()));
+    connect(sms500, SIGNAL(scanFinished()), this, SLOT(leastSquareObjectiveFunction()));
+
     lsqnonlin->start();
 }
 
@@ -572,7 +576,8 @@ void MainWindow::leastSquarePerformScan()
     ui->rbtnFlux->setChecked(true);
 
     // Parameters
-    ui->AutoRangeCheckBox->setChecked(false);
+//    ui->AutoRangeCheckBox->setChecked(false);
+    ui->AutoRangeCheckBox->setChecked(true);
     ui->integrationTimeComboBox->setCurrentIndex(7);
     ui->numberOfScansLineEdit->setText("1");
     ui->dynamicDarkCheckBox->setChecked(true);
@@ -636,6 +641,80 @@ void MainWindow::leastSquarePerformScan()
         }
     }
 
+    // GUI Updates
+    ui->dac04channel25->setText(QString::number(level(0)));
+    ui->dac04channel26->setText(QString::number(level(1)));
+    ui->dac04channel27->setText(QString::number(level(2)));
+    ui->dac04channel28->setText(QString::number(level(3)));
+    ui->dac04channel29->setText(QString::number(level(4)));
+    ui->dac04channel30->setText(QString::number(level(5)));
+    ui->dac04channel31->setText(QString::number(level(6)));
+    ui->dac04channel32->setText(QString::number(level(7)));
+    ui->dac05channel33->setText(QString::number(level(8)));
+    ui->dac05channel34->setText(QString::number(level(9)));
+    ui->dac05channel35->setText(QString::number(level(10)));
+    ui->dac05channel36->setText(QString::number(level(11)));
+    ui->dac05channel37->setText(QString::number(level(12)));
+    ui->dac05channel38->setText(QString::number(level(13)));
+    ui->dac05channel39->setText(QString::number(level(14)));
+    ui->dac05channel40->setText(QString::number(level(15)));
+    ui->dac06channel41->setText(QString::number(level(16)));
+    ui->dac06channel42->setText(QString::number(level(17)));
+    ui->dac06channel43->setText(QString::number(level(18)));
+    ui->dac06channel44->setText(QString::number(level(19)));
+    ui->dac06channel45->setText(QString::number(level(20)));
+    ui->dac06channel46->setText(QString::number(level(21)));
+    ui->dac06channel47->setText(QString::number(level(22)));
+    ui->dac06channel48->setText(QString::number(level(23)));
+    ui->dac07channel49->setText(QString::number(level(24)));
+    ui->dac07channel50->setText(QString::number(level(25)));
+    ui->dac07channel51->setText(QString::number(level(26)));
+    ui->dac07channel52->setText(QString::number(level(27)));
+    ui->dac07channel53->setText(QString::number(level(28)));
+    ui->dac07channel54->setText(QString::number(level(29)));
+    ui->dac07channel55->setText(QString::number(level(30)));
+    ui->dac07channel56->setText(QString::number(level(31)));
+    ui->dac08channel57->setText(QString::number(level(32)));
+    ui->dac08channel58->setText(QString::number(level(33)));
+    ui->dac08channel59->setText(QString::number(level(34)));
+    ui->dac08channel60->setText(QString::number(level(35)));
+    ui->dac08channel61->setText(QString::number(level(36)));
+    ui->dac08channel62->setText(QString::number(level(37)));
+    ui->dac08channel63->setText(QString::number(level(38)));
+    ui->dac08channel64->setText(QString::number(level(39)));
+    ui->dac09channel65->setText(QString::number(level(40)));
+    ui->dac09channel66->setText(QString::number(level(41)));
+    ui->dac09channel67->setText(QString::number(level(42)));
+    ui->dac09channel68->setText(QString::number(level(43)));
+    ui->dac09channel69->setText(QString::number(level(44)));
+    ui->dac09channel70->setText(QString::number(level(45)));
+//    ui->dac09channel71->setText(QString::number(level(46)));
+    ui->dac09channel72->setText(QString::number(level(46)));
+    ui->dac10channel73->setText(QString::number(level(47)));
+    ui->dac10channel74->setText(QString::number(level(48)));
+    ui->dac10channel75->setText(QString::number(level(59)));
+    ui->dac10channel76->setText(QString::number(level(50)));
+    ui->dac10channel77->setText(QString::number(level(51)));
+    ui->dac10channel78->setText(QString::number(level(52)));
+    ui->dac10channel79->setText(QString::number(level(53)));
+    ui->dac10channel80->setText(QString::number(level(54)));
+    ui->dac11channel81->setText(QString::number(level(55)));
+    ui->dac11channel82->setText(QString::number(level(56)));
+    ui->dac11channel83->setText(QString::number(level(57)));
+    ui->dac11channel84->setText(QString::number(level(58)));
+    ui->dac11channel85->setText(QString::number(level(59)));
+    ui->dac11channel86->setText(QString::number(level(60)));
+    ui->dac11channel87->setText(QString::number(level(61)));
+    ui->dac11channel88->setText(QString::number(level(62)));
+    ui->dac12channel89->setText(QString::number(level(63)));
+    ui->dac12channel90->setText(QString::number(level(64)));
+    ui->dac12channel91->setText(QString::number(level(65)));
+    ui->dac12channel92->setText(QString::number(level(66)));
+    ui->dac12channel93->setText(QString::number(level(67)));
+    ui->dac12channel94->setText(QString::number(level(68)));
+    ui->dac12channel95->setText(QString::number(level(69)));
+    ui->dac12channel96->setText(QString::number(level(70)));
+
     sms500->start();
 }
 
@@ -655,11 +734,6 @@ void MainWindow::leastSquareObjectiveFunction()
     }
 
     lsqnonlin->setObjectiveFunction( f );
-
-    f = f.array().pow(2);
-    double fiting = f.sum();
-    fiting = sqrt(fiting);
-    statusBar()->showMessage(tr("f(x) = %1").arg(fiting));
 }
 
 void MainWindow::leastSquareStop()
