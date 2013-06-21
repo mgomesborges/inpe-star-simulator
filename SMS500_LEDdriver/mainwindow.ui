@@ -58,7 +58,7 @@
        </sizepolicy>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tab_7">
        <attribute name="title">
@@ -312,8 +312,8 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>194</width>
-               <height>382</height>
+               <width>220</width>
+               <height>396</height>
               </rect>
              </property>
              <attribute name="label">
@@ -3871,8 +3871,17 @@ p, li { white-space: pre-wrap; }
     <addaction name="actionAboutSMS500"/>
     <addaction name="actionAboutThisSoftware"/>
    </widget>
+   <widget class="QMenu" name="menuStar_Settings">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <addaction name="actionStar_Settings"/>
+    <addaction name="actionLeast_Square"/>
+    <addaction name="actionStop_Least_Square"/>
+   </widget>
    <addaction name="menuCalibration"/>
    <addaction name="menuHelp"/>
+   <addaction name="menuStar_Settings"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <action name="actionCalibrateSystem">
@@ -3896,6 +3905,26 @@ p, li { white-space: pre-wrap; }
    </property>
    <property name="iconVisibleInMenu">
     <bool>true</bool>
+   </property>
+  </action>
+  <action name="actionStar_Settings">
+   <property name="text">
+    <string>Star Settings</string>
+   </property>
+  </action>
+  <action name="actionLoad_LED_Data">
+   <property name="text">
+    <string>Load LED Data</string>
+   </property>
+  </action>
+  <action name="actionLeast_Square">
+   <property name="text">
+    <string>Least Square</string>
+   </property>
+  </action>
+  <action name="actionStop_Least_Square">
+   <property name="text">
+    <string>Stop Least Square</string>
    </property>
   </action>
  </widget>

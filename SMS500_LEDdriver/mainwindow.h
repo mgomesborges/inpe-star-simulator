@@ -8,6 +8,13 @@ class SMS500;
 class LedDriver;
 class QLabel;
 class Plot;
+class LeastSquareNonLin;
+class Star;
+
+#include <iostream>
+#include <Eigen/Dense>
+using namespace Eigen;
+using namespace std;
 
 namespace Ui {
 class MainWindow;
@@ -34,6 +41,11 @@ private:
     int scanNumberOfLedModeling;
 
     std::vector< std::vector<double> > ledModelingData;
+    std::vector< std::vector<double> > starData;
+
+    Star *star;
+
+    LeastSquareNonLin *lsqnonlin;
 
     void resizeEvent(QResizeEvent *);
 
@@ -46,6 +58,7 @@ private:
     void ledDriverConfigureDac(char dac);
 
 private slots:
+    void statusBarMessage(QString message);
     void warningMessage(QString title, QString message);
     void aboutThisSoftware();
     void aboutSMS500();
@@ -85,6 +98,13 @@ private slots:
     void ledModelingSaveChannelData(QString channel);
     void ledModelingFinished();
     void ledModelingInfo(QString message);
+
+    void starSettings();
+    void leastSquare();
+
+    void leastSquarePerformScan();
+    void leastSquareObjectiveFunction();
+    void leastSquareStop();
 };
 
 #endif // MAINWINDOW_H

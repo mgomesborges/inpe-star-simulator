@@ -18,7 +18,9 @@ SOURCES += main.cpp\
     plot.cpp \
     zoomer.cpp \
     sms500.cpp \
-    leddriver.cpp
+    leddriver.cpp \
+    star.cpp \
+    leastsquarenonlin.cpp
 
 HEADERS  += mainwindow.h \
     aboutsmsdialog.h \
@@ -27,10 +29,13 @@ HEADERS  += mainwindow.h \
     zoomer.h \
     sms500.h \
     leddriver.h \
-    ftd2xx.h
+    ftd2xx.h \
+    star.h \
+    leastsquarenonlin.h
 
 FORMS    += mainwindow.ui \
-    aboutsmsdialog.ui
+    aboutsmsdialog.ui \
+    star.ui
 
 RESOURCES += \
     Pics.qrc

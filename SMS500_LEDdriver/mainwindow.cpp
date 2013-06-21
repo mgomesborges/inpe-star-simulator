@@ -7,10 +7,16 @@
 #include <fstream>
 
 #include "aboutsmsdialog.h"
+#include "leastsquarenonlin.h"
+#include "star.h"
 #include "sms500.h"
 #include "plot.h"
 
 #include "leddriver.h"
+
+#include <iostream>
+#include <Eigen/Dense>
+using namespace Eigen;
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -35,6 +41,20 @@ MainWindow::MainWindow(QWidget *parent) :
 
     mStatusLabel = new QLabel;
     statusBar()->addPermanentWidget( mStatusLabel );
+
+    // Star
+    star = new Star(this);
+    star->setMagnitude("0");
+    star->setTemperature("20000");
+
+    connect(ui->actionStar_Settings, SIGNAL(triggered(bool)), this, SLOT(starSettings()));
+    connect(ui->actionLeast_Square, SIGNAL(triggered(bool)), this, SLOT(leastSquare()));
+
+    lsqnonlin = new LeastSquareNonLin(this);
+    connect(lsqnonlin, SIGNAL(info(QString)), this, SLOT(statusBarMessage(QString)));
+    connect(lsqnonlin, SIGNAL(performScan()), this, SLOT(leastSquarePerformScan()));
+    connect(sms500, SIGNAL(scanFinished()), this, SLOT(leastSquareObjectiveFunction()));
+
 
     sms500SignalAndSlot();
     ledDriverSignalAndSlot();
@@ -274,6 +294,11 @@ void MainWindow::ledDriverConfigureDac(char dac)
     }
 }
 
+void MainWindow::statusBarMessage(QString message)
+{
+    statusBar()->showMessage(message);
+}
+
 void MainWindow::ledModeling()
 {
     if (ui->btnLedModeling->text().contains("LED Modeling") == true) {
@@ -478,6 +503,170 @@ void MainWindow::ledModelingInfo(QString message)
     ui->scanInfo->setText(message);
 }
 
+void MainWindow::starSettings()
+{
+    if (star->exec() == true) {
+        int starMagnitude   = star->magnitude();
+        int starTemperature = star->temperature();
+
+        starData = star->getData(starMagnitude, starTemperature);
+
+        QPolygonF points;
+
+        for (int i = 0; i <= 640; i++) {
+            points << QPointF(starData[i][0], starData[i][1]);
+        }
+
+        const bool doReplot = plot->autoReplot();
+        plot->setAutoReplot( false );
+        plot->showData(points, 1000);
+        plot->setAutoReplot( doReplot );
+        plot->replot();
+
+        // Plot Led Driver
+        plotLedDriver->setAutoReplot( false );
+        plotLedDriver->showData(points, 1000);
+        plotLedDriver->setAutoReplot( doReplot );
+        plotLedDriver->replot();
+    }
+}
+
+void MainWindow::leastSquare()
+{
+    lsqnonlin->start();
+}
+
+void MainWindow::leastSquarePerformScan()
+{
+    // STAR
+    int starMagnitude   = star->magnitude();
+    int starTemperature = star->temperature();
+    starData            = star->getData(starMagnitude, starTemperature);
+
+    QPolygonF points;
+
+    for (int i = 0; i <= 640; i++) {
+        points << QPointF(starData[i][0], starData[i][1]);
+    }
+
+    const bool doReplot = plot->autoReplot();
+    plot->setAutoReplot( false );
+    plot->showData(points, 1000);
+    plot->setAutoReplot( doReplot );
+    plot->replot();
+
+    // Plot Led Driver
+    plotLedDriver->setAutoReplot( false );
+    plotLedDriver->showData(points, 1000);
+    plotLedDriver->setAutoReplot( doReplot );
+    plotLedDriver->replot();
+
+    // SMS500 Configure
+    if (sms500->isConnected() == false) {
+        if (sms500Connect() == false) {
+            return;
+        }
+    }
+
+    // Set Operation Mode to Flux
+    ui->rbtnFlux->setChecked(true);
+
+    // Parameters
+    ui->AutoRangeCheckBox->setChecked(false);
+    ui->integrationTimeComboBox->setCurrentIndex(7);
+    ui->numberOfScansLineEdit->setText("1");
+    ui->dynamicDarkCheckBox->setChecked(true);
+//    ui->smoothingSpinBox->setValue(2);
+
+    sms500Configure();
+
+    // LED Driver Connection
+    if (ledDriver->isConnected() == false) {
+        ledDriverConnectDisconnect();
+    }
+
+//    ledDriver->resetDACs();
+
+    int index;
+    int dac;
+    int port;
+    int levelValue;
+    char txBuffer[10];
+
+    Matrix<int, 71, 1> level = lsqnonlin->getSolution();
+
+    for (int channel = 25; channel <= 96; channel++) {
+        if (channel != 71) {
+            // Find the value of DAC
+            if ((channel % 8) != 0) {
+                dac  = (channel / 8);
+            } else {
+                dac  = channel / 8 - 1;
+            }
+
+            // Find the value of Port
+            port = channel - (dac * 8) - 1;
+
+            // corrects missing channel
+            if (channel < 71) {
+                index = channel - 25;
+            } else {
+                index = channel - 26;
+            }
+
+            levelValue = level(index);
+
+            // LED Driver configure: set DAC and Port value
+            txBuffer[0] = 0x0C;
+            txBuffer[1] = 0x40 |  (levelValue & 0x0000000F);
+            txBuffer[2] = 0x80 | ((levelValue & 0x000000F0) >> 4);
+            txBuffer[3] = 0x0D;
+            txBuffer[4] = 0x40 | ((levelValue & 0x00000F00) >> 8);
+            txBuffer[5] = 0x80 | port;
+            txBuffer[6] = dac;
+            txBuffer[7] = 0x40;
+            txBuffer[8] = 0x80;
+            txBuffer[9] = '\0';
+
+            if (ledDriver->writeData(txBuffer) == false) {
+                QMessageBox::warning(this, tr("Connection Error"),
+                                     tr("Spectrometer Hardware not found.\n\n"
+                                        "Check USB connection and try again..."));
+            }
+        }
+    }
+
+    sms500->start();
+}
+
+void MainWindow::leastSquareObjectiveFunction()
+{    
+    double *masterData;
+    masterData = sms500->masterData();
+
+    Matrix<double, 641, 1> f;
+
+    for (int i = 0; i < sms500->points(); i++) {
+        if (masterData[i] < 0) {
+            f(i) = starData[i][1];
+        } else {
+            f(i) = starData[i][1] - masterData[i];
+        }
+    }
+
+    lsqnonlin->setObjectiveFunction( f );
+
+    f = f.array().pow(2);
+    double fiting = f.sum();
+    fiting = sqrt(fiting);
+    statusBar()->showMessage(tr("f(x) = %1").arg(fiting));
+}
+
+void MainWindow::leastSquareStop()
+{
+    lsqnonlin->stop();
+}
+
 void MainWindow::sms500Configure()
 {
     QString operationMode;
@@ -643,7 +832,11 @@ void MainWindow::performScan()
 void MainWindow::plotScanResult(const double *masterData, const int *wavelegth, int peakWavelength,
                                 double amplitude,int numberOfPoints, int scanNumber, int integrationTimeIndex, bool satured)
 {
+    // Corrigir isso depois
+    amplitude = 1000;
+
     QPolygonF points;
+    QPolygonF starPoints;
 
     plot->setPlotLimits(300, 1100, 0, amplitude);
     plotLedDriver->setPlotLimits(300, 1100, 0, amplitude);
@@ -656,17 +849,31 @@ void MainWindow::plotScanResult(const double *masterData, const int *wavelegth, 
         }
     }
 
+    if (starData.size() == 641) {
+        for (int i = 0; i <= 640; i++) {
+            starPoints << QPointF(starData[i][0], starData[i][1]);
+        }
+    }
+
     const bool doReplot = plot->autoReplot();
     plot->setAutoReplot( false );
     plot->showPeak(peakWavelength, amplitude);
-    plot->showData(points, amplitude);
+    if (starData.size() == 641) {
+        plot->showData(points, starPoints, amplitude);
+    } else {
+        plot->showData(points, amplitude);
+    }
     plot->setAutoReplot( doReplot );
     plot->replot();
 
     // Plot Led Driver
     plotLedDriver->setAutoReplot( false );
     plotLedDriver->showPeak(peakWavelength, amplitude);
-    plotLedDriver->showData(points, amplitude);
+    if (starData.size() == 641) {
+        plotLedDriver->showData(points, starPoints, amplitude);
+    } else {
+        plotLedDriver->showData(points, amplitude);
+    }
     plotLedDriver->setAutoReplot( doReplot );
     plotLedDriver->replot();
 

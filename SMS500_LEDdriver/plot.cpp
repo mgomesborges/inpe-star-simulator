@@ -36,12 +36,19 @@ Plot::Plot( QWidget *parent ) : QwtPlot( parent )
     setAxisTitle( QwtPlot::yLeft, "Amplitude (uW/nm)" );
 
     // curves
-    plotCurve = new QwtPlotCurve( "Amplitude" );
-    plotCurve->setRenderHint( QwtPlotItem::RenderAntialiased );
-    plotCurve->setPen( QPen( Qt::red ) );
-    plotCurve->setLegendAttribute( QwtPlotCurve::LegendShowLine );
-    plotCurve->setYAxis( QwtPlot::yLeft );
-    plotCurve->attach( this );
+    plotCurve[0] = new QwtPlotCurve( "Amplitude" );
+    plotCurve[0]->setRenderHint( QwtPlotItem::RenderAntialiased );
+    plotCurve[0]->setPen( QPen( Qt::red ) );
+    plotCurve[0]->setLegendAttribute( QwtPlotCurve::LegendShowLine );
+    plotCurve[0]->setYAxis( QwtPlot::yLeft );
+    plotCurve[0]->attach( this );
+
+    plotCurve[1] = new QwtPlotCurve( "Amplitude" );
+    plotCurve[1]->setRenderHint( QwtPlotItem::RenderAntialiased );
+    plotCurve[1]->setPen( QPen( Qt::blue ) );
+    plotCurve[1]->setLegendAttribute( QwtPlotCurve::LegendShowLine );
+    plotCurve[1]->setYAxis( QwtPlot::yLeft );
+    plotCurve[1]->attach( this );
 
     // marker
     plotMarker = new QwtPlotMarker();
@@ -91,7 +98,18 @@ void Plot::showData(QPolygonF &points, double amplitude)
 //    setAxisScaleEngine( QwtPlot::xBottom, new QwtLog10ScaleEngine );
     setAxisScale( QwtPlot::yLeft, 0.0, amplitude  );
     setAxisScale( QwtPlot::xBottom, xLimitMin, xLimitMax, 100);
-    plotCurve->setSamples(points);
+    plotCurve[0]->setSamples(points);
+}
+
+void Plot::showData(QPolygonF &points0, QPolygonF &points1, double amplitude)
+{
+    setAxisMaxMajor( QwtPlot::xBottom, 10 );
+    setAxisMaxMinor( QwtPlot::xBottom, 5 );
+
+    setAxisScale( QwtPlot::yLeft, 0.0, amplitude );
+    setAxisScale( QwtPlot::xBottom, xLimitMin, xLimitMax, 100);
+    plotCurve[0]->setSamples(points0);
+    plotCurve[1]->setSamples(points1);
 }
 
 void Plot::showPeak(double wavelength, double amplitude)

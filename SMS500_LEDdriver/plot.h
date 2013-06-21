@@ -23,12 +23,13 @@ public:
     QwtPlotPicker *plotPicker;
     QwtPlotPanner *plotPanner;
 
-    void showData(QPolygonF&, double);
+    void showData(QPolygonF& points, double amplitude);
+    void showData(QPolygonF& points0, QPolygonF &points1, double amplitude);
     void showPeak(double, double);
     void setPlotLimits(double xMin = 300, double xMax = 1100, double yMin = 0, double yMax = 1000);
 
 private:
-    QwtPlotCurve *plotCurve;
+    QwtPlotCurve *plotCurve[2];
     QwtPlotMarker *plotMarker;
     double yLimitMin;
     double yLimitMax;
