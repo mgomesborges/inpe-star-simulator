@@ -30,10 +30,10 @@ Desktop.ini
 # Recycle Bin used on file shares
 $RECYCLE.BIN/
 
-
 ##################################################
 # Arquivos de Compilação em C / C++
 ##################################################
+bin/
 
 # Compiled Object files
 # *.slo
