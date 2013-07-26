@@ -10,15 +10,21 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->scanNumberLabel_2->hide();
     ui->saturedLabel->hide();
     ui->saturedLabel_2->hide();
+    ui->startLongTermStabilityLabel->hide();
+    ui->startLongTermStabilityLabel_2->hide();
+    ui->stopLongTermStabilityLabel->hide();
+    ui->stopLongTermStabilityLabel_2->hide();
 
-    plot          = new Plot( ui->plotArea );
-    plotLedDriver = new Plot( ui->plotAreaLed );
-
-    sms500             = new SMS500(this);
-    ledDriver          = new LedDriver(this);
-    lsqStarDialog      = new LSqStarDataDialog(this);
-    lsqStarPlotEnabled = false;
-    lsqnonlin          = new LSqNonLin(this);
+    plot                        = new Plot(ui->plotArea);
+    plotLedDriver               = new Plot(ui->plotAreaLed);
+    plotLTS                     = new LongTermStabilityPlot(ui->plotAreaLongTermStability);
+    sms500                      = new SMS500(this);
+    ledDriver                   = new LedDriver(this);
+    lsqStarDialog               = new LSqStarDataDialog(this);
+    lsqStarPlotEnabled          = false;
+    lsqnonlin                   = new LSqNonLin(this);
+    longTermStability           = new LongTermStability(this);
+    longTermStabilityAlarmClock = new LongTermStabilityAlarmClock(this);
 
     statusLabel  = new QLabel;
     statusBar()->addPermanentWidget( statusLabel );
@@ -27,6 +33,7 @@ MainWindow::MainWindow(QWidget *parent) :
     sms500SignalAndSlot();
     ledDriverSignalAndSlot();
     lsqNonLinSignalAndSlot();
+    longTermStabilitySignalAndSlot();
     operationModeChanged();
 }
 
@@ -38,10 +45,16 @@ MainWindow::~MainWindow()
 void MainWindow::resizeEvent(QResizeEvent *)
 {
     ui->plotArea->resize(this->width() - 280, this->height() - 170);
-    plot->resize( ui->plotArea->width(), ui->plotArea->height() );
+    plot->resize(ui->plotArea->width(), ui->plotArea->height());
+
+    ui->plotAreaLongTermStability->resize(this->width() - 550, this->height() - 400);
+    plotLTS->resize(ui->plotAreaLongTermStability->width(), ui->plotAreaLongTermStability->height() - 100);
 
     if (ui->plotArea->width() > 700) {
-        ui->plotAreaLed->resize(ui->plotArea->width() - 450, 457);
+        ui->plotAreaLongTermStability->resize(this->width() - 520, this->height() - 190);
+        plotLTS->resize(ui->plotAreaLongTermStability->width(), ui->plotAreaLongTermStability->height());
+
+        ui->plotAreaLed->resize(ui->plotArea->width() - 460, ui->plotArea->height() - 100);
         plotLedDriver->resize( ui->plotAreaLed->width(), ui->plotAreaLed->height());
 
         ui->scanNumberLabel_2->show();
@@ -53,12 +66,28 @@ void MainWindow::resizeEvent(QResizeEvent *)
         }
 
         ui->saturedLabel_2->setGeometry(720, 60, 82, 23);
+
+        // Long Term Stability Labels
+        if (ui->startLongTermStabilityLabel->isHidden() == false) {
+            ui->startLongTermStabilityLabel->hide();
+            ui->startLongTermStabilityLabel_2->show();
+            ui->stopLongTermStabilityLabel->hide();
+            ui->stopLongTermStabilityLabel_2->show();
+        }
     } else {
         ui->plotAreaLed->resize(5, 457);
         plotLedDriver->resize( ui->plotAreaLed->width(), ui->plotAreaLed->height());
         ui->scanNumberLabel_2->hide();
         ui->scanInfo->hide();
         ui->saturedLabel_2->hide();
+
+        // Long Term Stability Labels
+        if (ui->startLongTermStabilityLabel_2->isHidden() == false) {
+            ui->startLongTermStabilityLabel->show();
+            ui->startLongTermStabilityLabel_2->hide();
+            ui->stopLongTermStabilityLabel->show();
+            ui->stopLongTermStabilityLabel_2->hide();
+        }
     }
 }
 
@@ -98,7 +127,7 @@ void MainWindow::sms500SaveScanData(const QString &filePath)
     }
     QTextStream out(&outFile);
 
-    QString currentTime(QDateTime::currentDateTime().toString(Qt::SystemLocaleLongDate));
+    QString currentTime(QDateTime::currentDateTime().toString(Qt::SystemLocaleShortDate));
     out << "Star Simulator file, Platform: Windows, Created on: " << currentTime << "\n";
     out << "\nStart wavelength.......: " << sms500->startWavelength();
     out << "\nStop wavelength........: " << sms500->stopWavelength();
@@ -201,128 +230,146 @@ void MainWindow::ledDriverDisconnect()
 
 void MainWindow::ledDriverDac04Changed()
 {
-    ledDriverValueOfPort[0] = ui->dac04channel25->text().toUInt();
-    ledDriverValueOfPort[1] = ui->dac04channel26->text().toUInt();
-    ledDriverValueOfPort[2] = ui->dac04channel27->text().toUInt();
-    ledDriverValueOfPort[3] = ui->dac04channel28->text().toUInt();
-    ledDriverValueOfPort[4] = ui->dac04channel29->text().toUInt();
-    ledDriverValueOfPort[5] = ui->dac04channel30->text().toUInt();
-    ledDriverValueOfPort[6] = ui->dac04channel31->text().toUInt();
-    ledDriverValueOfPort[7] = ui->dac04channel32->text().toUInt();
+    if (ledDriver->isConnected()) {
+        ledDriverValueOfPort[0] = ui->dac04channel25->text().toUInt();
+        ledDriverValueOfPort[1] = ui->dac04channel26->text().toUInt();
+        ledDriverValueOfPort[2] = ui->dac04channel27->text().toUInt();
+        ledDriverValueOfPort[3] = ui->dac04channel28->text().toUInt();
+        ledDriverValueOfPort[4] = ui->dac04channel29->text().toUInt();
+        ledDriverValueOfPort[5] = ui->dac04channel30->text().toUInt();
+        ledDriverValueOfPort[6] = ui->dac04channel31->text().toUInt();
+        ledDriverValueOfPort[7] = ui->dac04channel32->text().toUInt();
 
-    ledDriverConfigureDac( 3 );
+        ledDriverConfigureDac( 3 );
+    }
 }
 
 void MainWindow::ledDriverDac05Changed()
 {
-    ledDriverValueOfPort[0] = ui->dac05channel33->text().toUInt();
-    ledDriverValueOfPort[1] = ui->dac05channel34->text().toUInt();
-    ledDriverValueOfPort[2] = ui->dac05channel35->text().toUInt();
-    ledDriverValueOfPort[3] = ui->dac05channel36->text().toUInt();
-    ledDriverValueOfPort[4] = ui->dac05channel37->text().toUInt();
-    ledDriverValueOfPort[5] = ui->dac05channel38->text().toUInt();
-    ledDriverValueOfPort[6] = ui->dac05channel39->text().toUInt();
-    ledDriverValueOfPort[7] = ui->dac05channel40->text().toUInt();
+    if (ledDriver->isConnected()) {
+        ledDriverValueOfPort[0] = ui->dac05channel33->text().toUInt();
+        ledDriverValueOfPort[1] = ui->dac05channel34->text().toUInt();
+        ledDriverValueOfPort[2] = ui->dac05channel35->text().toUInt();
+        ledDriverValueOfPort[3] = ui->dac05channel36->text().toUInt();
+        ledDriverValueOfPort[4] = ui->dac05channel37->text().toUInt();
+        ledDriverValueOfPort[5] = ui->dac05channel38->text().toUInt();
+        ledDriverValueOfPort[6] = ui->dac05channel39->text().toUInt();
+        ledDriverValueOfPort[7] = ui->dac05channel40->text().toUInt();
 
-    ledDriverConfigureDac( 4 );
+        ledDriverConfigureDac( 4 );
+    }
 }
 
 void MainWindow::ledDriverDac06Changed()
 {
-    ledDriverValueOfPort[0] = ui->dac06channel41->text().toUInt();
-    ledDriverValueOfPort[1] = ui->dac06channel42->text().toUInt();
-    ledDriverValueOfPort[2] = ui->dac06channel43->text().toUInt();
-    ledDriverValueOfPort[3] = ui->dac06channel44->text().toUInt();
-    ledDriverValueOfPort[4] = ui->dac06channel45->text().toUInt();
-    ledDriverValueOfPort[5] = ui->dac06channel46->text().toUInt();
-    ledDriverValueOfPort[6] = ui->dac06channel47->text().toUInt();
-    ledDriverValueOfPort[7] = ui->dac06channel48->text().toUInt();
+    if (ledDriver->isConnected()) {
+        ledDriverValueOfPort[0] = ui->dac06channel41->text().toUInt();
+        ledDriverValueOfPort[1] = ui->dac06channel42->text().toUInt();
+        ledDriverValueOfPort[2] = ui->dac06channel43->text().toUInt();
+        ledDriverValueOfPort[3] = ui->dac06channel44->text().toUInt();
+        ledDriverValueOfPort[4] = ui->dac06channel45->text().toUInt();
+        ledDriverValueOfPort[5] = ui->dac06channel46->text().toUInt();
+        ledDriverValueOfPort[6] = ui->dac06channel47->text().toUInt();
+        ledDriverValueOfPort[7] = ui->dac06channel48->text().toUInt();
 
-    ledDriverConfigureDac( 5 );
+        ledDriverConfigureDac( 5 );
+    }
 }
 
 void MainWindow::ledDriverDac07Changed()
 {
-    ledDriverValueOfPort[0] = ui->dac07channel49->text().toUInt();
-    ledDriverValueOfPort[1] = ui->dac07channel50->text().toUInt();
-    ledDriverValueOfPort[2] = ui->dac07channel51->text().toUInt();
-    ledDriverValueOfPort[3] = ui->dac07channel52->text().toUInt();
-    ledDriverValueOfPort[4] = ui->dac07channel53->text().toUInt();
-    ledDriverValueOfPort[5] = ui->dac07channel54->text().toUInt();
-    ledDriverValueOfPort[6] = ui->dac07channel55->text().toUInt();
-    ledDriverValueOfPort[7] = ui->dac07channel56->text().toUInt();
+    if (ledDriver->isConnected()) {
+        ledDriverValueOfPort[0] = ui->dac07channel49->text().toUInt();
+        ledDriverValueOfPort[1] = ui->dac07channel50->text().toUInt();
+        ledDriverValueOfPort[2] = ui->dac07channel51->text().toUInt();
+        ledDriverValueOfPort[3] = ui->dac07channel52->text().toUInt();
+        ledDriverValueOfPort[4] = ui->dac07channel53->text().toUInt();
+        ledDriverValueOfPort[5] = ui->dac07channel54->text().toUInt();
+        ledDriverValueOfPort[6] = ui->dac07channel55->text().toUInt();
+        ledDriverValueOfPort[7] = ui->dac07channel56->text().toUInt();
 
-    ledDriverConfigureDac( 6 );
+        ledDriverConfigureDac( 6 );
+    }
 }
 
 void MainWindow::ledDriverDac08Changed()
 {
-    ledDriverValueOfPort[0] = ui->dac08channel57->text().toUInt();
-    ledDriverValueOfPort[1] = ui->dac08channel58->text().toUInt();
-    ledDriverValueOfPort[2] = ui->dac08channel59->text().toUInt();
-    ledDriverValueOfPort[3] = ui->dac08channel60->text().toUInt();
-    ledDriverValueOfPort[4] = ui->dac08channel61->text().toUInt();
-    ledDriverValueOfPort[5] = ui->dac08channel62->text().toUInt();
-    ledDriverValueOfPort[6] = ui->dac08channel63->text().toUInt();
-    ledDriverValueOfPort[7] = ui->dac08channel64->text().toUInt();
+    if (ledDriver->isConnected()) {
+        ledDriverValueOfPort[0] = ui->dac08channel57->text().toUInt();
+        ledDriverValueOfPort[1] = ui->dac08channel58->text().toUInt();
+        ledDriverValueOfPort[2] = ui->dac08channel59->text().toUInt();
+        ledDriverValueOfPort[3] = ui->dac08channel60->text().toUInt();
+        ledDriverValueOfPort[4] = ui->dac08channel61->text().toUInt();
+        ledDriverValueOfPort[5] = ui->dac08channel62->text().toUInt();
+        ledDriverValueOfPort[6] = ui->dac08channel63->text().toUInt();
+        ledDriverValueOfPort[7] = ui->dac08channel64->text().toUInt();
 
-    ledDriverConfigureDac( 7 );
+        ledDriverConfigureDac( 7 );
+    }
 }
 
 void MainWindow::ledDriverDac09Changed()
 {
-    ledDriverValueOfPort[0] = ui->dac09channel65->text().toUInt();
-    ledDriverValueOfPort[1] = ui->dac09channel66->text().toUInt();
-    ledDriverValueOfPort[2] = ui->dac09channel67->text().toUInt();
-    ledDriverValueOfPort[3] = ui->dac09channel68->text().toUInt();
-    ledDriverValueOfPort[4] = ui->dac09channel69->text().toUInt();
-    ledDriverValueOfPort[5] = ui->dac09channel70->text().toUInt();
-    ledDriverValueOfPort[6] = ui->dac09channel71->text().toUInt();
-    ledDriverValueOfPort[7] = ui->dac09channel72->text().toUInt();
+    if (ledDriver->isConnected()) {
+        ledDriverValueOfPort[0] = ui->dac09channel65->text().toUInt();
+        ledDriverValueOfPort[1] = ui->dac09channel66->text().toUInt();
+        ledDriverValueOfPort[2] = ui->dac09channel67->text().toUInt();
+        ledDriverValueOfPort[3] = ui->dac09channel68->text().toUInt();
+        ledDriverValueOfPort[4] = ui->dac09channel69->text().toUInt();
+        ledDriverValueOfPort[5] = ui->dac09channel70->text().toUInt();
+        ledDriverValueOfPort[6] = ui->dac09channel71->text().toUInt();
+        ledDriverValueOfPort[7] = ui->dac09channel72->text().toUInt();
 
-    ledDriverConfigureDac( 8 );
+        ledDriverConfigureDac( 8 );
+    }
 }
 
 void MainWindow::ledDriverDac10Changed()
 {
-    ledDriverValueOfPort[0] = ui->dac10channel73->text().toUInt();
-    ledDriverValueOfPort[1] = ui->dac10channel74->text().toUInt();
-    ledDriverValueOfPort[2] = ui->dac10channel75->text().toUInt();
-    ledDriverValueOfPort[3] = ui->dac10channel76->text().toUInt();
-    ledDriverValueOfPort[4] = ui->dac10channel77->text().toUInt();
-    ledDriverValueOfPort[5] = ui->dac10channel78->text().toUInt();
-    ledDriverValueOfPort[6] = ui->dac10channel79->text().toUInt();
-    ledDriverValueOfPort[7] = ui->dac10channel80->text().toUInt();
+    if (ledDriver->isConnected()) {
+        ledDriverValueOfPort[0] = ui->dac10channel73->text().toUInt();
+        ledDriverValueOfPort[1] = ui->dac10channel74->text().toUInt();
+        ledDriverValueOfPort[2] = ui->dac10channel75->text().toUInt();
+        ledDriverValueOfPort[3] = ui->dac10channel76->text().toUInt();
+        ledDriverValueOfPort[4] = ui->dac10channel77->text().toUInt();
+        ledDriverValueOfPort[5] = ui->dac10channel78->text().toUInt();
+        ledDriverValueOfPort[6] = ui->dac10channel79->text().toUInt();
+        ledDriverValueOfPort[7] = ui->dac10channel80->text().toUInt();
 
-    ledDriverConfigureDac( 9 );
+        ledDriverConfigureDac( 9 );
+    }
 }
 
 void MainWindow::ledDriverDac11Changed()
 {
-    ledDriverValueOfPort[0] = ui->dac11channel81->text().toUInt();
-    ledDriverValueOfPort[1] = ui->dac11channel82->text().toUInt();
-    ledDriverValueOfPort[2] = ui->dac11channel83->text().toUInt();
-    ledDriverValueOfPort[3] = ui->dac11channel84->text().toUInt();
-    ledDriverValueOfPort[4] = ui->dac11channel85->text().toUInt();
-    ledDriverValueOfPort[5] = ui->dac11channel86->text().toUInt();
-    ledDriverValueOfPort[6] = ui->dac11channel87->text().toUInt();
-    ledDriverValueOfPort[7] = ui->dac11channel88->text().toUInt();
+    if (ledDriver->isConnected()) {
+        ledDriverValueOfPort[0] = ui->dac11channel81->text().toUInt();
+        ledDriverValueOfPort[1] = ui->dac11channel82->text().toUInt();
+        ledDriverValueOfPort[2] = ui->dac11channel83->text().toUInt();
+        ledDriverValueOfPort[3] = ui->dac11channel84->text().toUInt();
+        ledDriverValueOfPort[4] = ui->dac11channel85->text().toUInt();
+        ledDriverValueOfPort[5] = ui->dac11channel86->text().toUInt();
+        ledDriverValueOfPort[6] = ui->dac11channel87->text().toUInt();
+        ledDriverValueOfPort[7] = ui->dac11channel88->text().toUInt();
 
-    ledDriverConfigureDac( 10 );
+        ledDriverConfigureDac( 10 );
+    }
 }
 
 void MainWindow::ledDriverDac12Changed()
 {
-    ledDriverValueOfPort[0] = ui->dac12channel89->text().toUInt();
-    ledDriverValueOfPort[1] = ui->dac12channel90->text().toUInt();
-    ledDriverValueOfPort[2] = ui->dac12channel91->text().toUInt();
-    ledDriverValueOfPort[3] = ui->dac12channel92->text().toUInt();
-    ledDriverValueOfPort[4] = ui->dac12channel93->text().toUInt();
-    ledDriverValueOfPort[5] = ui->dac12channel94->text().toUInt();
-    ledDriverValueOfPort[6] = ui->dac12channel95->text().toUInt();
-    ledDriverValueOfPort[7] = ui->dac12channel96->text().toUInt();
+    if (ledDriver->isConnected()) {
+        ledDriverValueOfPort[0] = ui->dac12channel89->text().toUInt();
+        ledDriverValueOfPort[1] = ui->dac12channel90->text().toUInt();
+        ledDriverValueOfPort[2] = ui->dac12channel91->text().toUInt();
+        ledDriverValueOfPort[3] = ui->dac12channel92->text().toUInt();
+        ledDriverValueOfPort[4] = ui->dac12channel93->text().toUInt();
+        ledDriverValueOfPort[5] = ui->dac12channel94->text().toUInt();
+        ledDriverValueOfPort[6] = ui->dac12channel95->text().toUInt();
+        ledDriverValueOfPort[7] = ui->dac12channel96->text().toUInt();
 
-    ledDriverConfigureDac( 11 );
+        ledDriverConfigureDac( 11 );
+    }
 }
 
 void MainWindow::ledDriverConfigureDac(char dac)
@@ -344,6 +391,93 @@ void MainWindow::ledDriverConfigureDac(char dac)
             break;
         }
     }
+}
+
+QStringList MainWindow::ledDriverChannelValues()
+{
+    QStringList channelValue;
+    channelValue.append(ui->dac04channel25->text());
+    channelValue.append(ui->dac04channel26->text());
+    channelValue.append(ui->dac04channel27->text());
+    channelValue.append(ui->dac04channel28->text());
+    channelValue.append(ui->dac04channel29->text());
+    channelValue.append(ui->dac04channel30->text());
+    channelValue.append(ui->dac04channel31->text());
+    channelValue.append(ui->dac04channel32->text());
+
+    channelValue.append(ui->dac05channel33->text());
+    channelValue.append(ui->dac05channel34->text());
+    channelValue.append(ui->dac05channel35->text());
+    channelValue.append(ui->dac05channel36->text());
+    channelValue.append(ui->dac05channel37->text());
+    channelValue.append(ui->dac05channel38->text());
+    channelValue.append(ui->dac05channel39->text());
+    channelValue.append(ui->dac05channel40->text());
+
+    channelValue.append(ui->dac06channel41->text());
+    channelValue.append(ui->dac06channel42->text());
+    channelValue.append(ui->dac06channel43->text());
+    channelValue.append(ui->dac06channel44->text());
+    channelValue.append(ui->dac06channel45->text());
+    channelValue.append(ui->dac06channel46->text());
+    channelValue.append(ui->dac06channel47->text());
+    channelValue.append(ui->dac06channel48->text());
+
+    channelValue.append(ui->dac07channel49->text());
+    channelValue.append(ui->dac07channel50->text());
+    channelValue.append(ui->dac07channel51->text());
+    channelValue.append(ui->dac07channel52->text());
+    channelValue.append(ui->dac07channel53->text());
+    channelValue.append(ui->dac07channel54->text());
+    channelValue.append(ui->dac07channel55->text());
+    channelValue.append(ui->dac07channel56->text());
+
+    channelValue.append(ui->dac08channel57->text());
+    channelValue.append(ui->dac08channel58->text());
+    channelValue.append(ui->dac08channel59->text());
+    channelValue.append(ui->dac08channel60->text());
+    channelValue.append(ui->dac08channel61->text());
+    channelValue.append(ui->dac08channel62->text());
+    channelValue.append(ui->dac08channel63->text());
+    channelValue.append(ui->dac08channel64->text());
+
+    channelValue.append(ui->dac09channel65->text());
+    channelValue.append(ui->dac09channel66->text());
+    channelValue.append(ui->dac09channel67->text());
+    channelValue.append(ui->dac09channel68->text());
+    channelValue.append(ui->dac09channel69->text());
+    channelValue.append(ui->dac09channel70->text());
+    channelValue.append(ui->dac09channel71->text());
+    channelValue.append(ui->dac09channel72->text());
+
+    channelValue.append(ui->dac10channel73->text());
+    channelValue.append(ui->dac10channel74->text());
+    channelValue.append(ui->dac10channel75->text());
+    channelValue.append(ui->dac10channel76->text());
+    channelValue.append(ui->dac10channel77->text());
+    channelValue.append(ui->dac10channel78->text());
+    channelValue.append(ui->dac10channel79->text());
+    channelValue.append(ui->dac10channel80->text());
+
+    channelValue.append(ui->dac11channel81->text());
+    channelValue.append(ui->dac11channel82->text());
+    channelValue.append(ui->dac11channel83->text());
+    channelValue.append(ui->dac11channel84->text());
+    channelValue.append(ui->dac11channel85->text());
+    channelValue.append(ui->dac11channel86->text());
+    channelValue.append(ui->dac11channel87->text());
+    channelValue.append(ui->dac11channel88->text());
+
+    channelValue.append(ui->dac12channel89->text());
+    channelValue.append(ui->dac12channel90->text());
+    channelValue.append(ui->dac12channel91->text());
+    channelValue.append(ui->dac12channel92->text());
+    channelValue.append(ui->dac12channel93->text());
+    channelValue.append(ui->dac12channel94->text());
+    channelValue.append(ui->dac12channel95->text());
+    channelValue.append(ui->dac12channel96->text());
+
+    return channelValue;
 }
 
 void MainWindow::statusBarMessage(QString message)
@@ -712,6 +846,285 @@ void MainWindow::lsqNonLinLoadLedData()
     loadLedData.exec();
 }
 
+void MainWindow::longTermStabilityCreateDB()
+{
+    QString filePath = QFileDialog::getSaveFileName(
+                this,
+                tr("Long Term Stability :: Create Database"),
+                QDir::homePath(),
+                tr("Star Simulator DB *.db"));
+
+    if (filePath.isEmpty()) {
+        return;
+    }
+
+    // Checks if exist extension '.db'
+    if (filePath.contains(".db") == false) {
+        filePath.append(".db");
+    }
+
+    // Prevents errors
+    if (QFile::exists(filePath)) {
+        QFile::remove(filePath);
+    }
+
+    if (longTermStability->createDB(filePath) == false) {
+        QMessageBox::warning(this, tr("Long Term Stability"), longTermStability->lastError());
+        return;
+    }
+
+    longTermStabilityUpdateView();
+
+    ui->groupBoxTimeTorun->setEnabled(true);
+    ui->groupBoxTimeInterval->setEnabled(true);
+    ui->btnStartStopLongTermStability->setEnabled(true);
+    ui->btnExportAllLongTermStability->setEnabled(true);
+//    ui->btnExportSelectedLongTermStability->setEnabled(true);
+    ui->plotAreaLongTermStability->setEnabled(true);
+    ui->tableView->setEnabled(true);
+
+    // To clear tableView
+    longTermStabilityHandleTableSelection();
+}
+
+void MainWindow::longTermStabilityOpenDB()
+{
+    QString filePath = QFileDialog::getOpenFileName(
+                this,
+                tr("Long Term Stability :: Open Database"),
+                QDir::currentPath(),
+                tr("Star Simulator Database (*.db);;All files (*.*)"));
+
+    if (filePath.isNull()) {
+        return;
+    }
+
+    if (longTermStability->openDB(filePath) == false) {
+        QMessageBox::warning(this, tr("Long Term Stability"), longTermStability->lastError());
+        return;
+    }
+
+    longTermStabilityUpdateView();
+
+    ui->groupBoxTimeTorun->setEnabled(false);
+    ui->groupBoxTimeInterval->setEnabled(false);
+    ui->btnStartStopLongTermStability->setEnabled(false);
+    ui->btnExportAllLongTermStability->setEnabled(true);
+//    ui->btnExportSelectedLongTermStability->setEnabled(true);
+    ui->plotAreaLongTermStability->setEnabled(true);
+    ui->tableView->setEnabled(true);
+}
+
+void MainWindow::longTermStabilityExportAll()
+{
+    LongTermStabilityExportDialog ltsExportDialog(this, longTermStability);
+    ltsExportDialog.exec();
+}
+
+void MainWindow::longTermStabilityStartStop()
+{
+    if (ui->btnStartStopLongTermStability->text().contains("Start Timer")) {
+        longTermStabilityStart();
+    } else {
+        longTermStabilityStop();
+    }
+}
+
+void MainWindow::longTermStabilityStart()
+{
+    int hour = ui->longTermStabilityHour->text().toInt();
+    int min  = ui->longTermStabilityMin->text().toInt();
+    int sec  = ui->longTermStabilitySec->text().toInt();
+    int secTimeInterval;
+
+    if (ui->timeIntervalTypeComboBox->currentIndex() == 0) {
+        secTimeInterval = ui->longTermStabilityTimeInterval->text().toInt();
+    } else {
+        secTimeInterval = ui->longTermStabilityTimeInterval->text().toInt() * 60;
+    }
+
+    // Prevents parameters errors
+    if (secTimeInterval > ((hour * 60 * 60) + (min * 60) + sec)) {
+        QMessageBox::information(this,
+                                 tr("Long Term Stability"),
+                                 tr("The time interval is great then time to run!\n"
+                                    "Please, check your time parameters."));
+        return;
+    }
+
+    // Checks if SMS500 and LED Driver are connecteds and configureds
+    if ((sms500->isConnected() == false) && (ledDriver->isConnected() == false)) {
+        QMessageBox::warning(this, tr("Long Term Stability"), tr("SMS500 and LED Driver not configured."));
+        return;
+    } else {
+        if (sms500->isConnected() == false) {
+            QMessageBox::warning(this, tr("Long Term Stability"), tr("SMS500 not configured."));
+            return;
+        }
+        if (ledDriver->isConnected() == false) {
+            QMessageBox::warning(this, tr("Long Term Stability"), tr("LED Driver not configured."));
+            return;
+        }
+    }
+
+    // Configure SMS500's parameters
+    sms500StopScan();
+    ui->numberOfScansLineEdit->setText("1");
+
+    ui->btnStartStopLongTermStability->setIcon(QIcon(":/pics/stop.png"));
+    ui->btnStartStopLongTermStability->setText("Stop Timer");
+    ui->btnOpenDatabaseLongTermStability->setEnabled(false);
+    ui->btnCreateDatabaseLongTermStability->setEnabled(false);
+    ui->btnExportAllLongTermStability->setEnabled(false);
+    ui->btnExportSelectedLongTermStability->setEnabled(false);
+    ui->groupBoxTimeTorun->setEnabled(false);
+    ui->groupBoxTimeInterval->setEnabled(false);
+    ui->sms500Tab->setEnabled(false);
+    ui->ledDriverTab->setEnabled(false);
+
+    // Adjusts textbox values
+    if (ui->longTermStabilityHour->text().isEmpty()) {
+        ui->longTermStabilityHour->setText("0");
+    }
+    if (ui->longTermStabilityMin->text().isEmpty()) {
+        ui->longTermStabilityMin->setText("0");
+    }
+    if (ui->longTermStabilitySec->text().isEmpty()) {
+        if (ui->longTermStabilityMin->text().compare("0") == 0) {
+            ui->longTermStabilitySec->setText("1");
+        } else {
+            ui->longTermStabilitySec->setText("0");
+        }
+    }
+    if (ui->longTermStabilityTimeInterval->text().isEmpty()) {
+        ui->longTermStabilityTimeInterval->setText("1");
+    }
+
+    longTermStabilityScanNumber = 0;
+
+    QDateTime stopTime;
+    stopTime.setTime_t((QDateTime::currentDateTime().currentMSecsSinceEpoch()/1000)
+                       + (hour * 60 * 60)
+                       + (min * 60)
+                       + sec);
+    ui->startLongTermStabilityLabel->setText(tr("Start: %1").arg(QDateTime::currentDateTime().toString(Qt::SystemLocaleShortDate)));
+    ui->stopLongTermStabilityLabel->setText(tr("Stop : %1").arg(stopTime.toString(Qt::SystemLocaleShortDate)));
+    ui->startLongTermStabilityLabel_2->setText(ui->startLongTermStabilityLabel->text());
+    ui->stopLongTermStabilityLabel_2->setText(ui->stopLongTermStabilityLabel->text());
+
+    // Long Term Stability Labels
+    if (ui->plotArea->width() > 700) {
+        ui->startLongTermStabilityLabel_2->show();
+        ui->stopLongTermStabilityLabel_2->show();
+    } else {
+        ui->startLongTermStabilityLabel->show();
+        ui->stopLongTermStabilityLabel->show();
+    }
+
+    longTermStabilityAlarmClock->setAlarmClock(hour, min, sec, secTimeInterval);
+    longTermStabilityAlarmClock->start();
+
+    // Save SMS500 and LED Driver parameters into database
+    int noiseReduction = 0;
+    if (ui->noiseReductionCheckBox->isChecked()) {
+        noiseReduction = ui->noiseReductionLineEdit->text().toInt();
+    }
+
+    QStringList channelValues = ledDriverChannelValues();
+
+    // Save SMS500 and LED Driver parameters into database
+    longTermStability->saveSMS500andLedDriverParameters(
+                1,
+                ui->startWaveLineEdit->text().toInt(),
+                ui->stopWaveLineEdit->text().toInt(),
+                INTEGRATION_TIME[ui->integrationTimeComboBox->currentIndex()],
+                ui->samplesToAverageSpinBox->value(),
+                ui->smoothingSpinBox->value(),
+                noiseReduction,
+                ui->dynamicDarkCheckBox->isChecked(),
+                channelValues);
+}
+
+void MainWindow::longTermStabilityStop()
+{
+    longTermStabilityAlarmClock->stop();
+
+    ui->btnStartStopLongTermStability->setIcon(QIcon(":/pics/start.png"));
+    ui->btnStartStopLongTermStability->setText("Start Timer");
+    ui->btnOpenDatabaseLongTermStability->setEnabled(true);
+    ui->btnCreateDatabaseLongTermStability->setEnabled(true);
+    ui->btnExportAllLongTermStability->setEnabled(true);
+//        ui->btnExportSelectedLongTermStability->setEnabled(true);
+    ui->groupBoxTimeTorun->setEnabled(false);
+    ui->groupBoxTimeInterval->setEnabled(false);
+    ui->sms500Tab->setEnabled(true);
+    ui->ledDriverTab->setEnabled(true);
+
+    // Prevents Database subscrition
+    ui->btnStartStopLongTermStability->setEnabled(false);
+
+    ui->startLongTermStabilityLabel->hide();
+    ui->stopLongTermStabilityLabel->hide();
+    ui->startLongTermStabilityLabel_2->hide();
+    ui->stopLongTermStabilityLabel_2->hide();
+}
+
+void MainWindow::longTermStabilitySaveSMS500Data()
+{
+    if (longTermStabilityAlarmClock->isRunning()) {
+        longTermStabilityScanNumber++;
+
+        longTermStability->saveScanData(
+                    1,
+                    longTermStabilityScanNumber,
+                    sms500->dominanteWavelength(),
+                    sms500->peakWavelength(),
+                    sms500->fwhm(),
+                    sms500->power(),
+                    sms500->purity(),
+                    sms500->startWavelength(),
+                    sms500->stopWavelength(),
+                    sms500->masterData());
+
+        longTermStabilityUpdateView();
+    }
+}
+
+/**
+ *  Esta funcao necessita de melhorias
+ */
+void MainWindow::longTermStabilityHandleTableSelection()
+{
+    QPolygonF points;
+    QVector< QVector<double> > matrix =
+            longTermStability->selectedData(ui->tableView->selectionModel()->selectedRows());
+
+    plotLTS->setPlotLimits(300, 1100, 0, 1000);
+    for (int j = 0; j < matrix[0].size(); j++) {
+        for (int i = 0; i < matrix.size(); i++) {
+            points << QPointF(i + 360, matrix[i][j]);
+        }
+    }
+
+    const bool doReplot = plotLTS->autoReplot();
+    plotLTS->setAutoReplot( false );
+    plotLTS->showData(points, 1000);
+    plotLTS->setAutoReplot( doReplot );
+    plotLTS->replot();
+}
+
+void MainWindow::longTermStabilityUpdateView()
+{
+    QSqlTableModel *scanInfoModel = longTermStability->scanInfoTableModel();
+
+    ui->tableView->setModel(scanInfoModel);
+    ui->tableView->hideColumn(0);
+    ui->tableView->verticalHeader()->hide();
+    ui->tableView->resizeColumnsToContents();
+    ui->tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->tableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+}
+
 void MainWindow::sms500Configure()
 {
     QString operationMode;
@@ -857,19 +1270,29 @@ void MainWindow::sms500StartStopScan()
     }
 
     if (ui->btnStartScan->text().contains("Start Scan")) {
-        ui->btnStartScan->setIcon(QIcon(":/pics/stop.png"));
-        ui->btnStartScan->setText("Stop Scan");
-        ui->scanNumberLabel->setText(tr("    Scan number: %1").arg(0));
-        ui->scanNumberLabel->show();
-        ui->scanNumberLabel_2->setText(tr("    Scan number: %1").arg(0));
-        ui->btnZoom->setEnabled(false);
-        performScan();
+        sms500StartScan();
     } else {
-        ui->btnStartScan->setIcon(QIcon(":/pics/start.png"));
-        ui->btnStartScan->setText("Start Scan");
-        ui->btnSaveScan->setEnabled(true);
-        sms500->stop();
+        sms500StopScan();
     }
+}
+
+void MainWindow::sms500StartScan()
+{
+    ui->btnStartScan->setIcon(QIcon(":/pics/stop.png"));
+    ui->btnStartScan->setText("Stop Scan");
+    ui->scanNumberLabel->setText(tr("    Scan number: %1").arg(0));
+    ui->scanNumberLabel->show();
+    ui->scanNumberLabel_2->setText(tr("    Scan number: %1").arg(0));
+    ui->btnZoom->setEnabled(false);
+    performScan();
+}
+
+void MainWindow::sms500StopScan()
+{
+    ui->btnStartScan->setIcon(QIcon(":/pics/start.png"));
+    ui->btnStartScan->setText("Start Scan");
+    ui->btnSaveScan->setEnabled(true);
+    sms500->stop();
 }
 
 void MainWindow::performScan()
@@ -882,7 +1305,7 @@ void MainWindow::performScan()
 void MainWindow::plotScanResult(const double *masterData, const int *wavelegth, int peakWavelength,
                                 double amplitude,int numberOfPoints, int scanNumber, int integrationTimeIndex, bool satured)
 {
-    amplitude = 1000;
+    //amplitude = 1000;
 
     QPolygonF points;
     QPolygonF starPoints;
@@ -1069,6 +1492,18 @@ void MainWindow::uiInputValidator()
     QValidator *ledModelingIncDecValidator =
             new QRegExpValidator(QRegExp("^[1-9][0-9]{0,2}$|^1000$"), this);
     ui->levelDecrement->setValidator(ledModelingIncDecValidator);
+
+    QValidator *timeValidator = new QRegExpValidator(QRegExp("^([0-9]|[1-5][0-9]{1})$"), this);
+    ui->longTermStabilityMin->setValidator(timeValidator);
+    ui->longTermStabilitySec->setValidator(timeValidator);
+
+    QValidator *hourValidator =
+            new QRegExpValidator(QRegExp("^(0|[1-9][0-9]{0,2})$"), this);
+    ui->longTermStabilityHour->setValidator(hourValidator);
+
+    QValidator *timeInterval =
+            new QRegExpValidator(QRegExp("^([1-9][0-9]{0,3})$"), this);
+    ui->longTermStabilityTimeInterval->setValidator(timeInterval);
 
     QValidator *channelValidator =
             new QRegExpValidator(QRegExp("^0$|^[1-9][0-9]{0,2}$|^[1-3][0-9]{0,3}$|^40([0-8][0-9]|[9][0-5])$"), this);
@@ -1282,3 +1717,18 @@ void MainWindow::lsqNonLinSignalAndSlot()
     connect(ui->actionLSqNonLinStart,        SIGNAL(triggered()),     this,  SLOT(lsqNonLinStart()));
     connect(ui->actionLSqNonLinStop,         SIGNAL(triggered()), lsqnonlin, SLOT(stop()));
 }
+
+void MainWindow::longTermStabilitySignalAndSlot()
+{
+    connect(ui->btnStartStopLongTermStability, SIGNAL(clicked()), this, SLOT(longTermStabilityStartStop()));
+    connect(longTermStabilityAlarmClock, SIGNAL(timeout()), this, SLOT(performScan()));
+    connect(longTermStabilityAlarmClock, SIGNAL(finished()), this, SLOT(longTermStabilityStop()));
+
+    connect(sms500, SIGNAL(scanFinished()), this, SLOT(longTermStabilitySaveSMS500Data()));
+
+    connect(ui->btnCreateDatabaseLongTermStability, SIGNAL(clicked()), this, SLOT(longTermStabilityCreateDB()));
+    connect(ui->btnOpenDatabaseLongTermStability, SIGNAL(clicked()), this, SLOT(longTermStabilityOpenDB()));
+    connect(ui->btnExportAllLongTermStability, SIGNAL(clicked()), this, SLOT(longTermStabilityExportAll()));
+    connect(ui->tableView, SIGNAL(clicked(QModelIndex)), this, SLOT(longTermStabilityHandleTableSelection()));
+}
+

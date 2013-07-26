@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui
+QT       += core gui sql
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -18,11 +18,14 @@ SOURCES += main.cpp\
     zoomer.cpp \
     sms500.cpp \
     leddriver.cpp \
-    longtermstability.cpp \
     lsqloadleddata.cpp \
     lsqloadleddatadialog.cpp \
     lsqnonlin.cpp \
-    lsqstardatadialog.cpp
+    lsqstardatadialog.cpp \
+    longtermstabilityexportdialog.cpp \
+    longtermstability.cpp \
+    longtermstabilityplot.cpp \
+    longtermstabilityalarmclock.cpp
 
 HEADERS  += mainwindow.h \
     aboutsmsdialog.h \
@@ -32,17 +35,20 @@ HEADERS  += mainwindow.h \
     sms500.h \
     leddriver.h \
     ftd2xx.h \
-    longtermstability.h \
     lsqloadleddata.h \
     lsqloadleddatadialog.h \
     lsqnonlin.h \
-    lsqstardatadialog.h
+    lsqstardatadialog.h \
+    longtermstabilityexportdialog.h \
+    longtermstability.h \
+    longtermstabilityplot.h \
+    longtermstabilityalarmclock.h
 
 FORMS    += mainwindow.ui \
     aboutsmsdialog.ui \
-    longtermstabilitydialog.ui \
     lsqloadleddatadialog.ui \
-    lsqstardatadialog.ui
+    lsqstardatadialog.ui \
+    longtermstabilityexportdialog.ui
 
 RESOURCES += \
     Pics.qrc

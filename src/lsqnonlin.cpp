@@ -108,7 +108,7 @@ void LSqNonLin::run()
 //    alpha        = getAlpha( xCurrent );
     alpha = 0.1;
 
-    for (int i = 0; i < 500; i++) {
+    for (int i = 0; i < 5000; i++) {
         msleep(1); // wait 1ms for continue, see Qt Thread's Documentation
         if (stopThread == true) {
             return;

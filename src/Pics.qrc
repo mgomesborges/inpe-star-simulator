@@ -8,5 +8,8 @@
         <file>pics/save.png</file>
         <file>pics/logo.png</file>
         <file>pics/led.jpg</file>
+        <file>pics/database_add.png</file>
+        <file>pics/database_search.png</file>
+        <file>pics/database_up.png</file>
     </qresource>
 </RCC>

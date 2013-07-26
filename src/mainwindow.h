@@ -11,13 +11,17 @@
 #include <QMessageBox>
 #include <QDateTime>
 
+#include "plot.h"
+#include "sms500.h"
+#include "leddriver.h"
 #include "aboutsmsdialog.h"
 #include "lsqnonlin.h"
 #include "lsqloadleddatadialog.h"
 #include "lsqstardatadialog.h"
-#include "sms500.h"
-#include "leddriver.h"
-#include "plot.h"
+#include "longtermstability.h"
+#include "longtermstabilityplot.h"
+#include "longtermstabilityalarmclock.h"
+#include "longtermstabilityexportdialog.h"
 
 #include <Eigen/Dense>
 using namespace Eigen;
@@ -46,7 +50,9 @@ private:
     void sms500SignalAndSlot();
     void ledDriverSignalAndSlot();
     void ledDriverConfigureDac(char dac);
+    QStringList ledDriverChannelValues();
     void lsqNonLinSignalAndSlot();
+    void longTermStabilitySignalAndSlot();
 
     Ui::MainWindow *ui;
     QLabel *statusLabel;
@@ -67,6 +73,11 @@ private:
     LSqStarDataDialog *lsqStarDialog;
     vector< vector<double> > lsqStarData;
 
+    LongTermStability *longTermStability;
+    LongTermStabilityAlarmClock *longTermStabilityAlarmClock;
+    LongTermStabilityPlot *plotLTS;
+    int longTermStabilityScanNumber;
+
 private slots:
     void statusBarMessage(QString message);
     void warningMessage(QString title, QString message);
@@ -79,6 +90,8 @@ private slots:
 
     void connectDisconnect();
     void sms500StartStopScan();
+    void sms500StartScan();
+    void sms500StopScan();
     void performScan();
     void plotScanResult(const double *masterData, const int *wavelegth,int peakWavelength,
                         double amplitude, int numberOfPoints, int scanNumber, int integrationTimeIndex, bool satured);
@@ -118,6 +131,16 @@ private slots:
     void lsqNonLinPerformScan();
     void lsqNonLinObjectiveFunction();
     void lsqNonLinLoadLedData();
+
+    void longTermStabilityCreateDB();
+    void longTermStabilityOpenDB();
+    void longTermStabilityExportAll();
+    void longTermStabilityStartStop();
+    void longTermStabilityStart();
+    void longTermStabilityStop();
+    void longTermStabilitySaveSMS500Data();
+    void longTermStabilityHandleTableSelection();
+    void longTermStabilityUpdateView();
 };
 
 #endif // MAINWINDOW_H

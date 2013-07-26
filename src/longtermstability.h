@@ -1,22 +1,74 @@
 #ifndef LONGTERMSTABILITY_H
 #define LONGTERMSTABILITY_H
 
-#include <QDialog>
+#include <QThread>
+#include <QStringList>
+#include <QFileDialog>
+#include <QMessageBox>
+#include <QTextStream>
+#include <QDateTime>
+#include <QSqlTableModel>
+#include <QSqlRecord>
+#include <QSqlDatabase>
+#include <QSqlQuery>
+#include <QSqlError>
 
-namespace Ui {
-class LongTermStability;
-}
-
-class LongTermStability : public QDialog
+class LongTermStability : public QThread
 {
     Q_OBJECT
-    
 public:
-    explicit LongTermStability(QWidget *parent = 0);
+    explicit LongTermStability(QObject *parent = 0);
     ~LongTermStability();
-    
+
+    bool createDB(const QString &filePath);
+    bool openDB(const QString &filePath);
+    QSqlTableModel *scanInfoTableModel();
+    QVector< QVector<double> > selectedData(QModelIndexList indexList);
+    QString lastError();
+    void exportData(const QString &filePath);
+    void stop();
+    bool status();
+
+    bool saveSMS500andLedDriverParameters(
+            int id,
+            int startWavelength,
+            int stopWavelength,
+            int integrationTime,
+            int samplesToAverage,
+            int boxcarSmoothing,
+            int noiseReduction,
+            bool dynamicDark,
+            QStringList channelValue);
+
+    bool saveScanData(int id,
+            int scanNumber,
+            int dominateWavelength,
+            int peakWavelength,
+            int fwhm,
+            double power,
+            double purity,
+            int startWavelength,
+            int stopWavelength,
+            const double *masterData);
+
+signals:
+    void progressMinimumInfo(int value);
+    void progressMaximumInfo(int value);
+    void progressInfo(int value);
+    void error(QString message);
+
 private:
-    Ui::LongTermStability *ui;
+    void run();
+
+    bool currentStatus;
+    bool stopThread;
+    QSqlDatabase db;
+    QString exportFilePath;
+    QString lastErrorMessage;
+    QSqlTableModel *scanInfoModel;
+    QSqlTableModel *parametersModel;
+    QSqlTableModel *ledDriverConfigurationModel;
+    QSqlTableModel *scanDataModel;
 };
 
 #endif // LONGTERMSTABILITY_H
