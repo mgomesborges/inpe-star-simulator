@@ -105,13 +105,13 @@ void LSqNonLin::run()
     }
 
     stopCriteria = 0;
-//    alpha        = getAlpha( xCurrent );
+    //    alpha        = getAlpha( xCurrent );
     alpha = 0.1;
 
     for (int i = 0; i < 5000; i++) {
         msleep(1); // wait 1ms for continue, see Qt Thread's Documentation
         if (stopThread == true) {
-            return;
+            break;
         }
 
         getObjectiveFunction(xCurrent);
@@ -162,13 +162,15 @@ void LSqNonLin::run()
 
             if (stopCriteria == 5) {
                 emit info(tr("Least Square Finished: f(x) = %1").arg(fxCurrent));
-                return;
+                break;
             }
         } else {
             stopCriteria = 0;
             emit info(tr("f(x): %1").arg(fxCurrent));
         }
     }
+
+    emit finished();
 }
 
 void LSqNonLin::jacobian(const MatrixXi &x)

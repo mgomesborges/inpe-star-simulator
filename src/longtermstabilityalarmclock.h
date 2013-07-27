@@ -2,9 +2,6 @@
 #define LONGTERMSTABILITYALARMCLOCK_H
 
 #include <QThread>
-#include <QTime>
-#include <QVector>
-#include <qmath.h>
 
 class LongTermStabilityAlarmClock : public QThread
 {
@@ -12,7 +9,7 @@ class LongTermStabilityAlarmClock : public QThread
 public:
     explicit LongTermStabilityAlarmClock(QObject *parent = 0);
 
-    void setAlarmClock(int hour, int min, int sec, int timeIntervalInSec);
+    void setAlarmClock(int hours, int minutes, int seconds, int timeIntervalInSeconds);
 
 signals:
     void timeout();
@@ -24,10 +21,9 @@ public slots:
 private:
     void run();
 
+    int timeInterval;
+    int numberOfTimesToRun;
     bool stopThread;
-    int milliSecondTimeInterval;
-    QVector<int> milliSecondTimeToRun;
-    QTime timeHandle;
 };
 
 #endif // LONGTERMSTABILITYALARMCLOCK_H

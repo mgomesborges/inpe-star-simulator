@@ -20,13 +20,16 @@ public:
 
     int magnitude();
     int temperature();
+    double peak();
     void setMagnitude(const QString& magnitude) const;
     void setTemperature(const QString& temperature) const;
 
-    vector< vector<double> > getData();
+    QVector< QVector<double> > spectralData();
+    QPolygonF spectralDataToPlot();
 
 private:
     Ui::LSqStarDataDialog *ui;
+    double starPeak;
 };
 
 #endif // LSQSTARDATA_H

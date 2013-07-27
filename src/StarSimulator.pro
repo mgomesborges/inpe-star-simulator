@@ -15,7 +15,6 @@ SOURCES += main.cpp\
     mainwindow.cpp \
     aboutsmsdialog.cpp \
     plot.cpp \
-    zoomer.cpp \
     sms500.cpp \
     leddriver.cpp \
     lsqloadleddata.cpp \
@@ -24,14 +23,12 @@ SOURCES += main.cpp\
     lsqstardatadialog.cpp \
     longtermstabilityexportdialog.cpp \
     longtermstability.cpp \
-    longtermstabilityplot.cpp \
     longtermstabilityalarmclock.cpp
 
 HEADERS  += mainwindow.h \
     aboutsmsdialog.h \
     SpecData.h \
     plot.h \
-    zoomer.h \
     sms500.h \
     leddriver.h \
     ftd2xx.h \
@@ -41,7 +38,6 @@ HEADERS  += mainwindow.h \
     lsqstardatadialog.h \
     longtermstabilityexportdialog.h \
     longtermstability.h \
-    longtermstabilityplot.h \
     longtermstabilityalarmclock.h
 
 FORMS    += mainwindow.ui \

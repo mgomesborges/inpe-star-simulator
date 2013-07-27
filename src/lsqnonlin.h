@@ -24,6 +24,7 @@ signals:
     void ledDataNotFound();
     void info(QString message);
     void performScan();
+    void finished();
 
 public slots:
     void stop();

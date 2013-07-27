@@ -23,7 +23,7 @@ public:
     bool createDB(const QString &filePath);
     bool openDB(const QString &filePath);
     QSqlTableModel *scanInfoTableModel();
-    QVector< QVector<double> > selectedData(QModelIndexList indexList);
+    QPolygonF selectedData(QModelIndexList indexList, QVector<double> &maximumAmplitude);
     QString lastError();
     void exportData(const QString &filePath);
     void stop();

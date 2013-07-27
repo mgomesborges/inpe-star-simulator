@@ -2,6 +2,7 @@
 #define SMS500_H
 
 #include <QThread>
+#include <QPolygon>
 #include "SpecData.h"
 
 class SMS500 : public QThread
@@ -66,8 +67,8 @@ private:
     void run();
 
 signals:
-    void scanPerformed(const double *masterData, const int *wavelegth, int peakWavelength,
-                       double amplitude, int numberOfPoints, int scanNumber, int integrationTimeIndex, bool satured);
+    void scanPerformed(QPolygonF points, int peakWavelength, double amplitude,
+                       int scanNumber, int integrationTimeIndex, bool satured);
     void scanFinished();
 
 public slots:

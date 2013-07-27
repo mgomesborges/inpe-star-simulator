@@ -15,16 +15,18 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->stopLongTermStabilityLabel->hide();
     ui->stopLongTermStabilityLabel_2->hide();
 
-    plot                        = new Plot(ui->plotArea);
-    plotLedDriver               = new Plot(ui->plotAreaLed);
-    plotLTS                     = new LongTermStabilityPlot(ui->plotAreaLongTermStability);
+    plotSMS500                  = new Plot(ui->plotArea, tr("Amplitude"));
+    plotLedDriver               = new Plot(ui->plotAreaLed, tr("Amplitude"));
+    plotLTS                     = new Plot(ui->plotAreaLongTermStability, tr("Amplitude"));
     sms500                      = new SMS500(this);
     ledDriver                   = new LedDriver(this);
     lsqStarDialog               = new LSqStarDataDialog(this);
-    lsqStarPlotEnabled          = false;
     lsqnonlin                   = new LSqNonLin(this);
     longTermStability           = new LongTermStability(this);
     longTermStabilityAlarmClock = new LongTermStabilityAlarmClock(this);
+
+    plotSMS500->setxLabel(tr("Wavelength (nm)"));
+    plotSMS500->setyLabel(tr("Amplitude (uW/nm)"));
 
     statusLabel  = new QLabel;
     statusBar()->addPermanentWidget( statusLabel );
@@ -45,7 +47,7 @@ MainWindow::~MainWindow()
 void MainWindow::resizeEvent(QResizeEvent *)
 {
     ui->plotArea->resize(this->width() - 280, this->height() - 170);
-    plot->resize(ui->plotArea->width(), ui->plotArea->height());
+    plotSMS500->resize(ui->plotArea->width(), ui->plotArea->height());
 
     ui->plotAreaLongTermStability->resize(this->width() - 550, this->height() - 400);
     plotLTS->resize(ui->plotAreaLongTermStability->width(), ui->plotAreaLongTermStability->height() - 100);
@@ -79,7 +81,6 @@ void MainWindow::resizeEvent(QResizeEvent *)
         plotLedDriver->resize( ui->plotAreaLed->width(), ui->plotAreaLed->height());
         ui->scanNumberLabel_2->hide();
         ui->scanInfo->hide();
-        ui->saturedLabel_2->hide();
 
         // Long Term Stability Labels
         if (ui->startLongTermStabilityLabel_2->isHidden() == false) {
@@ -94,7 +95,7 @@ void MainWindow::resizeEvent(QResizeEvent *)
 void MainWindow::showInfo(const QString &text)
 {
     if (text == QString::null) {
-        if (plot->plotPicker->rubberBand()) {
+        if (plotSMS500->plotPicker->rubberBand()) {
             statusBar()->showMessage(tr("Cursor Pos: Press left mouse button in plot region"));
         } else {
             statusBar()->showMessage(tr("Zoom: Press mouse button and drag"));
@@ -239,7 +240,6 @@ void MainWindow::ledDriverDac04Changed()
         ledDriverValueOfPort[5] = ui->dac04channel30->text().toUInt();
         ledDriverValueOfPort[6] = ui->dac04channel31->text().toUInt();
         ledDriverValueOfPort[7] = ui->dac04channel32->text().toUInt();
-
         ledDriverConfigureDac( 3 );
     }
 }
@@ -255,7 +255,6 @@ void MainWindow::ledDriverDac05Changed()
         ledDriverValueOfPort[5] = ui->dac05channel38->text().toUInt();
         ledDriverValueOfPort[6] = ui->dac05channel39->text().toUInt();
         ledDriverValueOfPort[7] = ui->dac05channel40->text().toUInt();
-
         ledDriverConfigureDac( 4 );
     }
 }
@@ -287,7 +286,6 @@ void MainWindow::ledDriverDac07Changed()
         ledDriverValueOfPort[5] = ui->dac07channel54->text().toUInt();
         ledDriverValueOfPort[6] = ui->dac07channel55->text().toUInt();
         ledDriverValueOfPort[7] = ui->dac07channel56->text().toUInt();
-
         ledDriverConfigureDac( 6 );
     }
 }
@@ -303,7 +301,6 @@ void MainWindow::ledDriverDac08Changed()
         ledDriverValueOfPort[5] = ui->dac08channel62->text().toUInt();
         ledDriverValueOfPort[6] = ui->dac08channel63->text().toUInt();
         ledDriverValueOfPort[7] = ui->dac08channel64->text().toUInt();
-
         ledDriverConfigureDac( 7 );
     }
 }
@@ -319,7 +316,6 @@ void MainWindow::ledDriverDac09Changed()
         ledDriverValueOfPort[5] = ui->dac09channel70->text().toUInt();
         ledDriverValueOfPort[6] = ui->dac09channel71->text().toUInt();
         ledDriverValueOfPort[7] = ui->dac09channel72->text().toUInt();
-
         ledDriverConfigureDac( 8 );
     }
 }
@@ -335,7 +331,6 @@ void MainWindow::ledDriverDac10Changed()
         ledDriverValueOfPort[5] = ui->dac10channel78->text().toUInt();
         ledDriverValueOfPort[6] = ui->dac10channel79->text().toUInt();
         ledDriverValueOfPort[7] = ui->dac10channel80->text().toUInt();
-
         ledDriverConfigureDac( 9 );
     }
 }
@@ -351,7 +346,6 @@ void MainWindow::ledDriverDac11Changed()
         ledDriverValueOfPort[5] = ui->dac11channel86->text().toUInt();
         ledDriverValueOfPort[6] = ui->dac11channel87->text().toUInt();
         ledDriverValueOfPort[7] = ui->dac11channel88->text().toUInt();
-
         ledDriverConfigureDac( 10 );
     }
 }
@@ -367,7 +361,6 @@ void MainWindow::ledDriverDac12Changed()
         ledDriverValueOfPort[5] = ui->dac12channel94->text().toUInt();
         ledDriverValueOfPort[6] = ui->dac12channel95->text().toUInt();
         ledDriverValueOfPort[7] = ui->dac12channel96->text().toUInt();
-
         ledDriverConfigureDac( 11 );
     }
 }
@@ -631,16 +624,18 @@ void MainWindow::lsqNonLinStart()
         }
     }
 
-    // Set SMS500 Operation Mode to Flux
-    ui->rbtnFlux->setChecked(true);
+    // Prevents errors
+    if (sms500->isRunning()) {
+        sms500->stop();
+        sms500->wait();
+    }
 
-    // Set SMS500 Parameters
-    ui->numberOfScansLineEdit->setText("1");
-    ui->AutoRangeCheckBox->setChecked(false);
-    ui->integrationTimeComboBox->setCurrentIndex(7);
-    ui->samplesToAverageSpinBox->setValue(10);
-    ui->smoothingSpinBox->setValue(2);
-    ui->noiseReductionCheckBox->setChecked(true);
+
+    ui->rbtnFlux->setChecked(true);           // Set SMS500 Operation Mode to Flux
+    ui->numberOfScansLineEdit->setText("1");  // Set SMS500 Parameters
+    ui->AutoRangeCheckBox->setChecked(true);
+    ui->samplesToAverageSpinBox->setValue(5);
+    ui->smoothingSpinBox->setValue(1);
     ui->dynamicDarkCheckBox->setChecked(true);
 
     sms500Configure();
@@ -652,60 +647,19 @@ void MainWindow::lsqNonLinStart()
         }
     }
 
-    lsqStarPlotEnabled = true;
-
     lsqnonlin->start();
 }
 
 void MainWindow::lsqNonLinStarSettings()
 {
     if (lsqStarDialog->exec() == true) {
-        lsqStarData = lsqStarDialog->getData();
-
-        QPolygonF points;
-
-        for (int i = 0; i <= 640; i++) {
-            points << QPointF(lsqStarData[i][0], lsqStarData[i][1]);
-        }
-
-        lsqStarPlotEnabled = true;
-
-        // Configure SMS500 Plot
-        const bool doReplot = plot->autoReplot();
-        plot->setAutoReplot( true );
-        plot->showData(points, 1000);
-        plot->setAutoReplot( doReplot );
-        plot->replot();
-
-        // Plot Led Driver
-        plotLedDriver->setAutoReplot( true );
-        plotLedDriver->showData(points, 1000);
-        plotLedDriver->setAutoReplot( doReplot );
-        plotLedDriver->replot();
+        // Plot Star in Least Square page
     }
 }
 
 void MainWindow::lsqNonLinPerformScan()
 {
-    QPolygonF points;
-    lsqStarData = lsqStarDialog->getData();
-
-    for (int i = 0; i < 641; i++) {
-        points << QPointF(lsqStarData[i][0], lsqStarData[i][1]);
-    }
-
-    // Configure SMS500 Plot
-    const bool doReplot = plot->autoReplot();
-    plot->setAutoReplot( false );
-    plot->showData(points, 1000);
-    plot->setAutoReplot( doReplot );
-//    plot->replot();
-
-    // Plot Led Driver Plot
-    plotLedDriver->setAutoReplot( false );
-    plotLedDriver->showData(points, 1000);
-    plotLedDriver->setAutoReplot( doReplot );
-//    plotLedDriver->replot();
+    // Plot Star and Data in Least Square page
 
     int dac;
     int port;
@@ -824,10 +778,12 @@ void MainWindow::lsqNonLinPerformScan()
 
 void MainWindow::lsqNonLinObjectiveFunction()
 {
-    double *masterData;
     MatrixXd f(641, 1);
+    double *masterData;
+    QVector< QVector<double> > lsqStarData;
+
     masterData  = sms500->masterData();
-    lsqStarData = lsqStarDialog->getData();
+    lsqStarData = lsqStarDialog->spectralData();
 
     for (int i = 0; i < sms500->points(); i++) {
         if (masterData[i] < 0) {
@@ -844,6 +800,11 @@ void MainWindow::lsqNonLinLoadLedData()
 {
     LSqLoadLedDataDialog loadLedData;
     loadLedData.exec();
+}
+
+void MainWindow::lsqNonLinFinished()
+{
+    // ver o que fazer
 }
 
 void MainWindow::longTermStabilityCreateDB()
@@ -873,18 +834,15 @@ void MainWindow::longTermStabilityCreateDB()
         return;
     }
 
+    // Updates tableView and plot
     longTermStabilityUpdateView();
 
     ui->groupBoxTimeTorun->setEnabled(true);
     ui->groupBoxTimeInterval->setEnabled(true);
     ui->btnStartStopLongTermStability->setEnabled(true);
     ui->btnExportAllLongTermStability->setEnabled(true);
-//    ui->btnExportSelectedLongTermStability->setEnabled(true);
     ui->plotAreaLongTermStability->setEnabled(true);
     ui->tableView->setEnabled(true);
-
-    // To clear tableView
-    longTermStabilityHandleTableSelection();
 }
 
 void MainWindow::longTermStabilityOpenDB()
@@ -904,13 +862,13 @@ void MainWindow::longTermStabilityOpenDB()
         return;
     }
 
+    // Updates tableView and plot
     longTermStabilityUpdateView();
 
     ui->groupBoxTimeTorun->setEnabled(false);
     ui->groupBoxTimeInterval->setEnabled(false);
     ui->btnStartStopLongTermStability->setEnabled(false);
     ui->btnExportAllLongTermStability->setEnabled(true);
-//    ui->btnExportSelectedLongTermStability->setEnabled(true);
     ui->plotAreaLongTermStability->setEnabled(true);
     ui->tableView->setEnabled(true);
 }
@@ -945,10 +903,8 @@ void MainWindow::longTermStabilityStart()
 
     // Prevents parameters errors
     if (secTimeInterval > ((hour * 60 * 60) + (min * 60) + sec)) {
-        QMessageBox::information(this,
-                                 tr("Long Term Stability"),
-                                 tr("The time interval is great then time to run!\n"
-                                    "Please, check your time parameters."));
+        QMessageBox::information(this, tr("Long Term Stability"),
+                                 tr("The time interval is great then time to run!\nPlease, check your time parameters."));
         return;
     }
 
@@ -1054,7 +1010,6 @@ void MainWindow::longTermStabilityStop()
     ui->btnOpenDatabaseLongTermStability->setEnabled(true);
     ui->btnCreateDatabaseLongTermStability->setEnabled(true);
     ui->btnExportAllLongTermStability->setEnabled(true);
-//        ui->btnExportSelectedLongTermStability->setEnabled(true);
     ui->groupBoxTimeTorun->setEnabled(false);
     ui->groupBoxTimeInterval->setEnabled(false);
     ui->sms500Tab->setEnabled(true);
@@ -1095,22 +1050,13 @@ void MainWindow::longTermStabilitySaveSMS500Data()
  */
 void MainWindow::longTermStabilityHandleTableSelection()
 {
-    QPolygonF points;
-    QVector< QVector<double> > matrix =
-            longTermStability->selectedData(ui->tableView->selectionModel()->selectedRows());
+    QVector<double> amplitude;
+    QPolygonF points = longTermStability->selectedData(ui->tableView->selectionModel()->selectedRows(), amplitude);
 
-    plotLTS->setPlotLimits(300, 1100, 0, 1000);
-    for (int j = 0; j < matrix[0].size(); j++) {
-        for (int i = 0; i < matrix.size(); i++) {
-            points << QPointF(i + 360, matrix[i][j]);
-        }
+    plotLTS->setPlotLimits(360, 1100, 0, 1000);
+    for (int i = 0; i < amplitude.size(); i++) {
+        plotLTS->showData(points, amplitude[i]);
     }
-
-    const bool doReplot = plotLTS->autoReplot();
-    plotLTS->setAutoReplot( false );
-    plotLTS->showData(points, 1000);
-    plotLTS->setAutoReplot( doReplot );
-    plotLTS->replot();
 }
 
 void MainWindow::longTermStabilityUpdateView()
@@ -1197,7 +1143,7 @@ void MainWindow::sms500Disconnect()
 void MainWindow::aboutThisSoftware()
 {
     QMessageBox::about(this, tr("About this Software"),
-                       tr("This software was developed to control the SMS500 SphereOptics Spectroradiometer\n"
+                       tr("This software was developed to control the SMS500 SphereOptics Spectroradiometer "
                           "(Spectral Measurement System - SMS500).\n\n"
                           "Author:\nMarcos Eduardo Gomes Borges <marcoseborges@gmail.com>\n\n"
                           "Contributor:"
@@ -1228,16 +1174,16 @@ void MainWindow::aboutSMS500()
 void MainWindow::operationModeChanged()
 {
     if (ui->rbtnFlux->isChecked()) {
-        plot->setTitle("Operation Mode: Flux");
+        plotSMS500->setTitle("Operation Mode: Flux");
         plotLedDriver->setTitle("Operation Mode: Flux");
     } else if (ui->rbtnIntensity->isChecked()) {
-        plot->setTitle("Operation Mode: Intensity");
+        plotSMS500->setTitle("Operation Mode: Intensity");
         plotLedDriver->setTitle("Operation Mode: Intensity");
     } else if (ui->rbtnIrradiance->isChecked()) {
-        plot->setTitle("Operation Mode: Irradiance (lux)");
+        plotSMS500->setTitle("Operation Mode: Irradiance (lux)");
         plotLedDriver->setTitle("Operation Mode: Irradiance (lux)");
     } else if (ui->rbtnRadiance->isChecked()) {
-        plot->setTitle("Operation Mode: Radiance (cd/m2)");
+        plotSMS500->setTitle("Operation Mode: Radiance (cd/m2)");
         plotLedDriver->setTitle("Operation Mode: Radiance (cd/m2)");
     }
 }
@@ -1302,52 +1248,15 @@ void MainWindow::performScan()
     sms500->start();
 }
 
-void MainWindow::plotScanResult(const double *masterData, const int *wavelegth, int peakWavelength,
-                                double amplitude,int numberOfPoints, int scanNumber, int integrationTimeIndex, bool satured)
+void MainWindow::plotScanResult(QPolygonF points, int peakWavelength, double amplitude,
+                                int scanNumber, int integrationTimeIndex, bool satured)
 {
-    //amplitude = 1000;
-
-    QPolygonF points;
-    QPolygonF starPoints;
-
-    plot->setPlotLimits(300, 1100, 0, amplitude);
+    plotSMS500->setPlotLimits(300, 1100, 0, amplitude);
     plotLedDriver->setPlotLimits(300, 1100, 0, amplitude);
-
-    for (int i = 0; i < numberOfPoints; i++) {
-        if (masterData[i] < 0) {
-            points << QPointF(wavelegth[i], 0);
-        } else {
-            points << QPointF(wavelegth[i], masterData[i]);
-        }
-    }
-
-    if (lsqStarPlotEnabled == true) {
-        for (int i = 0; i < 641; i++) {
-            starPoints << QPointF(lsqStarData[i][0], lsqStarData[i][1]);
-        }
-    }
-
-    const bool doReplot = plot->autoReplot();
-    plot->setAutoReplot( false );
-    plot->showPeak(peakWavelength, amplitude);
-    if (lsqStarPlotEnabled == true) {
-        plot->showData(points, starPoints, amplitude);
-    } else {
-        plot->showData(points, amplitude);
-    }
-    plot->setAutoReplot( doReplot );
-    plot->replot();
-
-    // Plot Led Driver
-    plotLedDriver->setAutoReplot( false );
+    plotSMS500->showPeak(peakWavelength, amplitude);
     plotLedDriver->showPeak(peakWavelength, amplitude);
-    if (lsqStarPlotEnabled == true) {
-        plotLedDriver->showData(points, starPoints, amplitude);
-    } else {
-        plotLedDriver->showData(points, amplitude);
-    }
-    plotLedDriver->setAutoReplot( doReplot );
-    plotLedDriver->replot();
+    plotSMS500->showData(points, amplitude);
+    plotLedDriver->showData(points, amplitude);
 
     if (ui->AutoRangeCheckBox->isChecked()) {
         ui->integrationTimeComboBox->setCurrentIndex(integrationTimeIndex);
@@ -1359,13 +1268,14 @@ void MainWindow::plotScanResult(const double *masterData, const int *wavelegth, 
 
     if (satured == true) {
         ui->saturedLabel->show();
-        ui->saturedLabel_2->show();
+        if (ui->plotArea->width() > 700) {
+            ui->saturedLabel_2->show();
+        }
     } else {
         ui->saturedLabel->hide();
         ui->saturedLabel_2->hide();
     }
 
-    //    statusBar()->showMessage(tr("Geting Spectral Data"), 5000);
     sms500Configure();
     sms500->enableNextScan();
 }
@@ -1383,8 +1293,7 @@ void MainWindow::systemZero()
     if (sms500->isConnected() == false) {
         if (sms500Connect() == false) {
             QMessageBox::warning(this, tr("Connection Error"),
-                                 tr("Spectrometer Hardware not found.\n\n"
-                                    "Check USB connection and try again..."));
+                                 tr("Spectrometer Hardware not found.\n\nCheck USB connection and try again..."));
             return;
         }
     }
@@ -1429,8 +1338,7 @@ void MainWindow::calibrateSystem()
     if (QMessageBox::question(this, tr("Calibration Setup"),
                               tr("Please Setup the SMS500 for data acquisition...\n\n"
                                  "Turn on the calibration lamp and wait approximately 3 minutes\n"
-                                 "for the lamp to stabilize.\n\n"
-                                 "To continue with calibration,\n"
+                                 "for the lamp to stabilize.\n\nTo continue with calibration,\n"
                                  "click on the 'YES' button, 'No' to cancel"),
                               tr("Yes"), tr("No") )) {
         return;
@@ -1456,12 +1364,9 @@ void MainWindow::calibrateSystem()
 
 void MainWindow::moved( const QPoint &pos )
 {
-    QString info;
-    info.sprintf( "Wavelength=%g, Amplitude=%g",
-                  plot->invTransform( QwtPlot::xBottom, pos.x() ),
-                  plot->invTransform( QwtPlot::yLeft, pos.y() )
-                  );
-    showInfo( info );
+    showInfo(tr("Wavelength=%1, Amplitude=%2")
+             .arg(plotSMS500->invTransform(QwtPlot::xBottom, pos.x()))
+             .arg(plotSMS500->invTransform(QwtPlot::yLeft, pos.y())));
 }
 
 void MainWindow::selected( const QPolygon & )
@@ -1583,10 +1488,10 @@ void MainWindow::uiInputValidator()
 
 void MainWindow::sms500SignalAndSlot()
 {
-    connect(ui->btnZoom,      SIGNAL(toggled(bool)), plot,             SLOT(enableZoomMode(bool)));
-    connect(plot->plotPicker, SIGNAL(moved(const QPoint&)), this,      SLOT(moved(const QPoint&)));
-    connect(plot->plotPicker, SIGNAL(selected(const QPolygon&)), this, SLOT(selected(const QPolygon&)));
-    connect(plot,             SIGNAL(showInfo()),                this, SLOT(showInfo()));
+    connect(ui->btnZoom,            SIGNAL(toggled(bool)),       plotSMS500, SLOT(enableZoomMode(bool)));
+    connect(plotSMS500->plotPicker, SIGNAL(moved(const QPoint&)),      this, SLOT(moved(const QPoint&)));
+    connect(plotSMS500->plotPicker, SIGNAL(selected(const QPolygon&)), this, SLOT(selected(const QPolygon&)));
+    connect(plotSMS500,             SIGNAL(showInfo()),                this, SLOT(showInfo()));
 
     connect(ui->btnStartScan,         SIGNAL(clicked()), this, SLOT(sms500StartStopScan()));
     connect(ui->btnSaveScan,          SIGNAL(clicked()), this, SLOT(sms500SaveScanData()));
@@ -1606,8 +1511,8 @@ void MainWindow::sms500SignalAndSlot()
     connect(ui->actionAboutSMS500,       SIGNAL(triggered(bool)), this, SLOT(aboutSMS500()));
     connect(ui->actionAboutThisSoftware, SIGNAL(triggered(bool)), this, SLOT(aboutThisSoftware()));
 
-    connect(sms500, SIGNAL(scanPerformed(const double*,const int*,int,double,int,int,int, bool)), this,
-            SLOT(plotScanResult(const double*,const int*,int,double,int,int,int, bool)));
+    connect(sms500, SIGNAL(scanPerformed(QPolygonF,int,double,int,int,bool)), this,
+            SLOT(plotScanResult(QPolygonF,int,double,int,int,bool)));
     connect(sms500, SIGNAL(scanFinished()), this, SLOT(scanFinished()));
 }
 
@@ -1712,6 +1617,7 @@ void MainWindow::lsqNonLinSignalAndSlot()
     connect(lsqnonlin, SIGNAL(ledDataNotFound()), this, SLOT(lsqNonLinLoadLedData()));
     connect(lsqnonlin, SIGNAL(info(QString)),     this, SLOT(statusBarMessage(QString)));
     connect(lsqnonlin, SIGNAL(performScan()),     this, SLOT(lsqNonLinPerformScan()));
+    connect(lsqnonlin, SIGNAL(finished()),        this, SLOT(lsqNonLinFinished()));
     connect(sms500,    SIGNAL(scanFinished()),    this, SLOT(lsqNonLinObjectiveFunction()));
     connect(ui->actionLSqNonLinStarSettings, SIGNAL(triggered(bool)), this,  SLOT(lsqNonLinStarSettings()));
     connect(ui->actionLSqNonLinStart,        SIGNAL(triggered()),     this,  SLOT(lsqNonLinStart()));

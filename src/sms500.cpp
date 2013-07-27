@@ -53,19 +53,25 @@ void SMS500::run()
         amplitude      = -1000;
         peakWavelength = 0;
 
+        QPolygonF points;
+
         for(int i = 0; i < resultData.Points; i++) {
             if (amplitude < resultData.MasterData[i]) {
                 amplitude      = resultData.MasterData[i];
                 peakWavelength = resultData.WaveLength[i];
             }
+
+            if (resultData.MasterData[i] < 0) {
+                points << QPointF(resultData.WaveLength[i], 0);
+            } else {
+                points << QPointF(resultData.WaveLength[i], resultData.MasterData[i]);
+            }
         }
 
-        needAutoScan = isNeedAutoScan();
-
+        needAutoScan    = isNeedAutoScan();
         enabledNextScan = false;
 
-        emit scanPerformed(resultData.MasterData, resultData.WaveLength, peakWavelength,
-                           amplitude, resultData.Points, scanNumber, integrationTimeIndex, satured);
+        emit scanPerformed(points, peakWavelength, amplitude, scanNumber, integrationTimeIndex, satured);
 
         // Waiting for SMS500 be ready for next scan
         while ((enabledScan == true) && (enabledNextScan == false)) {

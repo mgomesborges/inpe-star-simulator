@@ -125,27 +125,18 @@ QSqlTableModel *LongTermStability::scanInfoTableModel()
 /**
  *  Esta funcao necessita de melhorias
  */
-QVector< QVector<double> > LongTermStability::selectedData(QModelIndexList indexList)
+QPolygonF LongTermStability::selectedData(QModelIndexList indexList, QVector<double> &maximumAmplitude)
 {
-    QVector< QVector<double> > matrix;
+    QPolygonF points;
+    int column   = 0;
+    int maxValue = 0;
 
-    // SQL Statments
-    parametersModel->setTable("parameters");
-    parametersModel->select();
-
-    QSqlRecord record   = parametersModel->record(0);
-    int startWavelength = record.value(1).toInt();
-    int stopWavelength  = record.value(2).toInt();
-
-    matrix.resize(stopWavelength - startWavelength + 1);
-
-    // SQL Statments
-    scanDataModel->setTable("scan");
-
+    maximumAmplitude.clear();
     qSort(indexList.begin(), indexList.end());
 
-    int column = 0;
     foreach (QModelIndex index, indexList) {
+        // SQL Statments for Scan Data
+        scanDataModel->setTable("scan");
         scanDataModel->setFilter(tr("scan_number = %1").arg(index.row() + 1));
         scanDataModel->select();
 
@@ -153,14 +144,19 @@ QVector< QVector<double> > LongTermStability::selectedData(QModelIndexList index
             if (row == scanDataModel->rowCount() - 1) {
                 scanDataModel->fetchMore();
             }
-            matrix[row].resize(row+1);
+
             QSqlRecord record = scanDataModel->record(row);
-            matrix[row][column] = record.value(2).toDouble();
+            points << QPointF(record.value(1).toInt(), record.value(2).toDouble());
+
+            // Get the maximum amplitude
+            if (record.value(2).toDouble() > maxValue) {
+                maxValue = record.value(2).toDouble();
+            }
         }
         column++;
+        maximumAmplitude.append(maxValue);
     }
-
-    return matrix;
+    return points;
 }
 
 QString LongTermStability::lastError()

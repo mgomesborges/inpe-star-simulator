@@ -19,9 +19,10 @@
 #include "lsqloadleddatadialog.h"
 #include "lsqstardatadialog.h"
 #include "longtermstability.h"
-#include "longtermstabilityplot.h"
 #include "longtermstabilityalarmclock.h"
 #include "longtermstabilityexportdialog.h"
+
+#include <iostream>
 
 #include <Eigen/Dense>
 using namespace Eigen;
@@ -56,7 +57,7 @@ private:
 
     Ui::MainWindow *ui;
     QLabel *statusLabel;
-    Plot *plot;
+    Plot *plotSMS500;
 
     SMS500 *sms500;
 
@@ -69,13 +70,11 @@ private:
     vector< vector<double> > ledModelingData;
 
     LSqNonLin *lsqnonlin;
-    bool lsqStarPlotEnabled;
     LSqStarDataDialog *lsqStarDialog;
-    vector< vector<double> > lsqStarData;
 
     LongTermStability *longTermStability;
     LongTermStabilityAlarmClock *longTermStabilityAlarmClock;
-    LongTermStabilityPlot *plotLTS;
+    Plot *plotLTS;
     int longTermStabilityScanNumber;
 
 private slots:
@@ -93,8 +92,8 @@ private slots:
     void sms500StartScan();
     void sms500StopScan();
     void performScan();
-    void plotScanResult(const double *masterData, const int *wavelegth,int peakWavelength,
-                        double amplitude, int numberOfPoints, int scanNumber, int integrationTimeIndex, bool satured);
+    void plotScanResult(QPolygonF points, int peakWavelength, double amplitude,
+                        int scanNumber, int integrationTimeIndex, bool satured);
     void scanFinished();
     void systemZero();
     void calibrateSystem();
@@ -131,6 +130,7 @@ private slots:
     void lsqNonLinPerformScan();
     void lsqNonLinObjectiveFunction();
     void lsqNonLinLoadLedData();
+    void lsqNonLinFinished();
 
     void longTermStabilityCreateDB();
     void longTermStabilityOpenDB();

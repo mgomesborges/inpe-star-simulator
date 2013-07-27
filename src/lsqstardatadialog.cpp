@@ -41,7 +41,12 @@ int LSqStarDataDialog::temperature()
     return ui->temperature->text().toInt();
 }
 
-vector< vector<double> > LSqStarDataDialog::getData()
+double LSqStarDataDialog::peak()
+{
+    return starPeak;
+}
+
+QVector< QVector<double> > LSqStarDataDialog::spectralData()
 {
     // Spectral Power Distribution of a model Star (W/cm^2/nm)
     //
@@ -51,7 +56,7 @@ vector< vector<double> > LSqStarDataDialog::getData()
     // Matos, Jose Dias. Dimensionamento radiometrico preliminar do sensor de estrelas.
     // Sao Jose dos Campos: INPE, 1997. Relatorio Tecnico.
 
-    vector< vector<double> > starData;
+    QVector< QVector<double> > starData;
     double WL[641]; // Size = 1000nm - 360nm = 640
 
     // Important constants
@@ -84,12 +89,30 @@ vector< vector<double> > LSqStarDataDialog::getData()
     // 1e-6 is conversion of watt to microwatt
     double transferenceFunction = 7.2035e-12 * 1e-6;
 
+    // Resets star peak
+    starPeak = 0;
+
     for (int i = 0; i <= 640; i++) {
         // Spectral Irradiance of a model Star (W/cm^2/nm)
         starData[i][1] = starData[i][1] * conversionFactor550 / transferenceFunction;
+
+        // Get star's peak value
+        if (starData[i][1] > starPeak) {
+            starPeak = starData[i][1];
+        }
     }
 
     return starData;
 }
 
+QPolygonF LSqStarDataDialog::spectralDataToPlot()
+{
+    QPolygonF spectralDataToPlot;
+    QVector< QVector<double> > starData = spectralData();
 
+    // Prepares Spectral Data to plot
+    for (int i = 0; i <= 640; i++) {
+        spectralDataToPlot << QPointF(starData[i][0], starData[i][1]);
+    }
+    return spectralDataToPlot;
+}
