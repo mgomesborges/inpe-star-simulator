@@ -149,16 +149,22 @@ bool LedDriver::resetDACs()
     return true;
 }
 
-void LedDriver::setModelingParameters(int startChannelValue, int endChannelValue, int levelDecrementValue)
+void LedDriver::setModelingParameters(int startChannelValue, int endChannelValue, int levelUpdateType, int incrementDecrementValue)
 {
-    startChannel   = startChannelValue;
-    endChannel     = endChannelValue;
-    levelDecrement = levelDecrementValue;
+    startChannel = startChannelValue;
+    endChannel   = endChannelValue;
+    updateType   = levelUpdateType;
+    incDecValue  = incrementDecrementValue;
 }
 
 void LedDriver::modelingNextChannel()
 {
     nextChannel = true;
+}
+
+QVector<int> LedDriver::digitalLevelIndex()
+{
+    return levelIndex;
 }
 
 void LedDriver::run()
@@ -176,7 +182,18 @@ void LedDriver::run()
 
         resetDACs();
 
-        for (int level = 4095; level > 0; level -= levelDecrement) {
+        // Setup Increment or Decrement level
+        int level = 0;
+
+        if (updateType == levelDecrement) {
+            level  = 4095;
+        }
+
+        levelIndex.clear();
+
+        for (int counter = 0; counter < 4096; counter++) {
+            levelIndex.append(level);
+
             // Find the value of DAC
             if ((channel % 8) != 0) {
                 dac  = (channel / 8);
@@ -269,6 +286,19 @@ void LedDriver::run()
             if (nextChannel == true) {
                 nextChannel = false;
                 break; // Go to Next Channel
+            }
+
+            // Computing next level
+            if (updateType == levelIncrement) {
+                level += incDecValue;
+                if (level > 4095) {
+                    break; // Go to Next Channel
+                }
+            } else if (updateType == levelDecrement) {
+                level -= incDecValue;
+                if (level < 0 ) {
+                    break; // Go to Next Channel
+                }
             }
         }
 

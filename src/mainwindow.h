@@ -12,17 +12,15 @@
 #include <QDateTime>
 
 #include "plot.h"
+#include "star.h"
 #include "sms500.h"
 #include "leddriver.h"
 #include "aboutsmsdialog.h"
 #include "lsqnonlin.h"
 #include "lsqloadleddatadialog.h"
-#include "lsqstardatadialog.h"
 #include "longtermstability.h"
 #include "longtermstabilityalarmclock.h"
 #include "longtermstabilityexportdialog.h"
-
-#include <iostream>
 
 #include <Eigen/Dense>
 using namespace Eigen;
@@ -53,6 +51,7 @@ private:
     void ledDriverConfigureDac(char dac);
     QStringList ledDriverChannelValues();
     void lsqNonLinSignalAndSlot();
+    MatrixXi lsqNonLinx0();
     void longTermStabilitySignalAndSlot();
 
     Ui::MainWindow *ui;
@@ -69,8 +68,10 @@ private:
     QString ledModelingFilePath;
     vector< vector<double> > ledModelingData;
 
+    Star *lsqNonLinStar;
     LSqNonLin *lsqnonlin;
-    LSqStarDataDialog *lsqStarDialog;
+    Plot *plotLSqNonLin;
+    QTime lsqNonLinTime;
 
     LongTermStability *longTermStability;
     LongTermStabilityAlarmClock *longTermStabilityAlarmClock;
@@ -125,12 +126,16 @@ private slots:
     void ledModelingFinished();
     void ledModelingInfo(QString message);
 
+    void lsqNonLInStartStop();
     void lsqNonLinStart();
+    void lsqNonLinStop();
     void lsqNonLinStarSettings();
     void lsqNonLinPerformScan();
     void lsqNonLinObjectiveFunction();
     void lsqNonLinLoadLedData();
-    void lsqNonLinFinished();
+    void lsqNonLinDampingFactorHandle();
+    void lsqNonLinx0Handle();
+    void lsqNonLinLog(QString info);
 
     void longTermStabilityCreateDB();
     void longTermStabilityOpenDB();

@@ -3,6 +3,7 @@
 
 #include <QThread>
 #include <Qtime>
+#include <QVector>
 
 #include <Windows.h>
 #include "ftd2xx.h"
@@ -11,13 +12,20 @@ class LedDriver : public QThread
 {
     Q_OBJECT
 public:
+    enum modelingParameters {
+        levelIncrement,
+        levelDecrement
+    };
+
     explicit LedDriver(QObject *parent = 0);
     ~LedDriver();
 
-    void setModelingParameters(int startChannelValue   = 25,
-                               int endChannelValue     = 11,
-                               int levelDecrementValue = 50);
+    void setModelingParameters(int startChannelValue       = 25,
+                               int endChannelValue         = 26,
+                               int levelUpdateType         = levelIncrement,
+                               int incrementDecrementValue = 50);
     void modelingNextChannel();
+    QVector<int> digitalLevelIndex();
 
 
 signals:
@@ -45,10 +53,12 @@ private:
     bool connected;
     int startChannel;
     int endChannel;
-    int levelDecrement;
+    int incDecValue;
+    int updateType;
     bool enabledModeling;
     bool enabledContinue;
     bool nextChannel;
+    QVector<int> levelIndex;
 };
 
 #endif // LEDDRIVER_H

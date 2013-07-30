@@ -11,11 +11,22 @@ LSqNonLin::LSqNonLin(QObject *parent) :
     initialized       = false;
     stopThread        = false;
     enabledToContinue = false;
+
+    // Create seed for the random
+    QTime time = QTime::currentTime();
+    qsrand((uint)time.msec());
+
+    resetToDefault();
 }
 
 LSqNonLin::~LSqNonLin()
 {
     stop();
+}
+
+int LSqNonLin::randomInt(int low, int high)
+{
+    return qrand() % ((high + 1) - low) + low;
 }
 
 void LSqNonLin::stop()
@@ -74,6 +85,18 @@ bool LSqNonLin::loadDerivates()
     return true;
 }
 
+void LSqNonLin::setx0Type(int x0SearchType, MatrixXi x)
+{
+    x0Type = x0SearchType;
+    x0     = x;
+}
+
+void LSqNonLin::setDampingFactor(int type, double value)
+{
+    dampingFactorType = type;
+    dampingFactor     = value;
+}
+
 void LSqNonLin::run()
 {
     stopThread = false;
@@ -81,6 +104,7 @@ void LSqNonLin::run()
     if (loadDerivates() == true) {
         initialized = true;
     } else {
+        resetToDefault();
         return;
     }
 
@@ -95,18 +119,35 @@ void LSqNonLin::run()
     MatrixXi xPrevious(72,1);
 
     // Initial Solution
-    for (int row = 0; row < xCurrent.rows(); row++) {
-        xCurrent(row) = 4000;
+    if (x0Type == x0Random) {
+        for (int row = 0; row < xCurrent.rows(); row++) {
+            xCurrent(row) = randomInt(0, 4095);
+        }
+    } else if (x0Type == x0UserDefined) {
+        xCurrent = x0;
+    } else { // x0GeneticAlgorithmSearch
 
-        // Impose a bound constraint for minimum value
+        // Genetic Algorithm here!
+
+    }
+
+    // Impose a bound constraint for minimum value
+    for (int row = 0; row < xCurrent.rows(); row++) {
         if (xCurrent(row) < minimumDigitalLevelByChannel(row)){
             xCurrent(row) = minimumDigitalLevelByChannel(row);
         }
     }
 
     stopCriteria = 0;
-    //    alpha        = getAlpha( xCurrent );
-    alpha = 0.1;
+
+    if (dampingFactorType == dampingFactorFixed) {
+        alpha = dampingFactor;
+    } else if (dampingFactorTechnique1) {
+        alpha = getAlpha( xCurrent );
+    } else {
+        // damping factor technique 2
+    }
+
 
     for (int i = 0; i < 5000; i++) {
         msleep(1); // wait 1ms for continue, see Qt Thread's Documentation
@@ -157,20 +198,34 @@ void LSqNonLin::run()
         if (fxCurrent > fxPrevious) {
             xCurrent  = xPrevious;
             fxCurrent = fxPrevious;
-            alpha     = getAlpha(xCurrent);
+
+            if (dampingFactorType == dampingFactorFixed) {
+                alpha = dampingFactor;
+            } else if (dampingFactorTechnique1) {
+                alpha = getAlpha( xCurrent );
+            } else {
+                // damping factor technique 2
+            }
+
             stopCriteria++;
 
             if (stopCriteria == 5) {
-                emit info(tr("Least Square Finished: f(x) = %1").arg(fxCurrent));
+                emit info(tr("\n\nLeast Square Finished by Stop Criteria: f(x) = %1").arg(fxCurrent));
                 break;
             }
         } else {
             stopCriteria = 0;
-            emit info(tr("f(x): %1").arg(fxCurrent));
+            emit info(tr("Iteration: %1\tf(x): %2\tAlpha: %3").arg(i).arg(fxCurrent).arg(alpha));
         }
     }
 
     emit finished();
+}
+
+void LSqNonLin::resetToDefault()
+{
+    x0Type            = x0Random;
+    dampingFactorType = dampingFactorTechnique1;
 }
 
 void LSqNonLin::jacobian(const MatrixXi &x)
@@ -288,12 +343,13 @@ double LSqNonLin::getAlpha(const MatrixXi &xCurrent)
         temp = objectiveFunction.array().pow(2);
         fx1  = sqrt( temp.sum() );
 
+        emit info(tr("  Getting Alpha:\tfx0: %1\tfx1: %2\talpha: %3").arg(fx0).arg(fx1).arg(alpha));
+
         // Stopping condition
         if (fx1 > fx0) {
+
             return alphaPrevious;
         }
-
-        emit info(tr("Getting Alpha: fx0: %1, fx1: %2 alpha: %3").arg(fx0).arg(fx1).arg(alpha));
     }
 }
 

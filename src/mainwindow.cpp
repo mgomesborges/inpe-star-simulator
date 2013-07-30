@@ -17,10 +17,11 @@ MainWindow::MainWindow(QWidget *parent) :
 
     plotSMS500                  = new Plot(ui->plotArea, tr("Amplitude"));
     plotLedDriver               = new Plot(ui->plotAreaLed, tr("Amplitude"));
+    plotLSqNonLin               = new Plot(ui->plotStarSimulator, tr("LEDs Amplitude"), tr("Star Amplitude"));
     plotLTS                     = new Plot(ui->plotAreaLongTermStability, tr("Amplitude"));
     sms500                      = new SMS500(this);
     ledDriver                   = new LedDriver(this);
-    lsqStarDialog               = new LSqStarDataDialog(this);
+    lsqNonLinStar               = new Star(this);
     lsqnonlin                   = new LSqNonLin(this);
     longTermStability           = new LongTermStability(this);
     longTermStabilityAlarmClock = new LongTermStabilityAlarmClock(this);
@@ -52,12 +53,18 @@ void MainWindow::resizeEvent(QResizeEvent *)
     ui->plotAreaLongTermStability->resize(this->width() - 550, this->height() - 400);
     plotLTS->resize(ui->plotAreaLongTermStability->width(), ui->plotAreaLongTermStability->height() - 100);
 
+    ui->plotStarSimulator->resize(this->width() - 590, this->width() - 590);
+    plotLSqNonLin->resize(ui->plotStarSimulator->width(), ui->plotStarSimulator->height());
+
     if (ui->plotArea->width() > 700) {
         ui->plotAreaLongTermStability->resize(this->width() - 520, this->height() - 190);
-        plotLTS->resize(ui->plotAreaLongTermStability->width(), ui->plotAreaLongTermStability->height());
+        plotLTS->resize(ui->plotAreaLongTermStability->width(), ui->plotAreaLongTermStability->height() * 0.9);
 
         ui->plotAreaLed->resize(ui->plotArea->width() - 460, ui->plotArea->height() - 100);
-        plotLedDriver->resize( ui->plotAreaLed->width(), ui->plotAreaLed->height());
+        plotLedDriver->resize( ui->plotAreaLed->width(), ui->plotAreaLed->height() * 0.8);
+
+        ui->plotStarSimulator->resize(this->width() - 590, this->height() * 0.7);
+        plotLSqNonLin->resize(ui->plotStarSimulator->width(), ui->plotStarSimulator->height());
 
         ui->scanNumberLabel_2->show();
         ui->scanNumberLabel_2->setGeometry(720,20, 230, 23);
@@ -509,9 +516,35 @@ void MainWindow::ledModeling()
             }
         }
 
-        ledDriver->setModelingParameters(ui->startChannel->text().toInt(),
-                                         ui->endChannel->text().toInt(),
-                                         ui->levelDecrement->text().toInt());
+        ui->starSimulatorTab->setEnabled(false);
+        ui->longTermStabilityTab->setEnabled(false);
+        ui->sms500Tab->setEnabled(false);
+        ui->ledModelingParametersGoupBox->setEnabled(false);
+        ui->dac4GroupBox->setEnabled(false);
+        ui->dac5GroupBox->setEnabled(false);
+        ui->dac6GroupBox->setEnabled(false);
+        ui->dac7GroupBox->setEnabled(false);
+        ui->dac8GroupBox->setEnabled(false);
+        ui->dac9GroupBox->setEnabled(false);
+        ui->dac10GroupBox->setEnabled(false);
+        ui->dac11GroupBox->setEnabled(false);
+        ui->dac12GroupBox->setEnabled(false);
+
+        // Led Modeling Setup
+        if (ui->levelIncDecComboBox->currentIndex() == 0) {
+            // Level Decrement
+            ledDriver->setModelingParameters(ui->startChannel->text().toInt(),
+                                             ui->endChannel->text().toInt(),
+                                             LedDriver::levelDecrement,
+                                             ui->levelIncDecValue->text().toInt());
+        } else {
+            // Level Increment
+            ledDriver->setModelingParameters(ui->startChannel->text().toInt(),
+                                             ui->endChannel->text().toInt(),
+                                             LedDriver::levelIncrement,
+                                             ui->levelIncDecValue->text().toInt());
+        }
+
         ledDriver->start();
 
         // Inits LED Modeling Data structure
@@ -543,8 +576,8 @@ void MainWindow::ledModelingSaveData(QString fileName)
     ui->scanNumberLabel->setText(tr("    Scan number: %1").arg(ledModelingScanNumber));
     ui->scanNumberLabel_2->setText(tr("    Scan number: %1").arg(ledModelingScanNumber));
 
-    // Stop Condition
-    if (sms500->maxMasterData() < 5) {
+    // Stop Condition = maxMasterData < 0 and Level Decrement
+    if ((sms500->maxMasterData() < 0) && (ui->levelIncDecComboBox->currentIndex() == 0)) {
         ledDriver->modelingNextChannel();
     }
 
@@ -581,6 +614,33 @@ void MainWindow::ledModelingSaveChannelData(QString channel)
     }
     QTextStream out(&outFile);
 
+    QString currentTime(QDateTime::currentDateTime().toString(Qt::SystemLocaleShortDate));
+    out << "Star Simulator file, Platform: Windows, Created on: " << currentTime << "\n";
+    out << "\nStart wavelength.......: " << sms500->startWavelength();
+    out << "\nStop wavelength........: " << sms500->stopWavelength();
+    out << "\nSamples to Average.....: " << sms500->samplesToAverage();
+    out << "\nBoxcar Smoothing.......: " << sms500->boxCarSmoothing();
+    if (sms500->isNoiseReductionEnabled()) {
+        out << "\nNoise Reduction........: " << sms500->noiseReduction();
+    } else {
+        out << "\nNoise Reduction........: 0";
+    }
+    if (sms500->isDynamicDarkEnabled()) {
+        out << "\nCorrec for Dynamic Dark: yes\n";
+    } else {
+        out << "\nCorrec for Dynamic Dark: no\n";
+    }
+    out << "\nHolds the Wavelength Data:";
+    out << "\nnm\tuW/nm/Digital Level\n\n";
+
+    // Generates header
+    QVector<int> index = ledDriver->digitalLevelIndex();
+    out << "\t";
+    for (int i = 0; i < index.size(); i++) {
+        out << index[i] << "\t";
+    }
+    out << "\n";
+
     for (int i = 0; i <= 640; i++) {
         for (unsigned int j = 0; j < ledModelingData[0].size(); j++) {
             out << ledModelingData[i][j] << '\t';
@@ -608,11 +668,34 @@ void MainWindow::ledModelingFinished()
     ui->btnLedModeling->setText("LED Modeling");
     ui->btnLedModeling->setIcon(QIcon(":/pics/led.jpg"));
     QMessageBox::information(this, tr("LED Modeling finished"), tr("Press Ok to continue.\t\t"));
+
+    ui->starSimulatorTab->setEnabled(true);
+    ui->longTermStabilityTab->setEnabled(true);
+    ui->sms500Tab->setEnabled(true);
+    ui->ledModelingParametersGoupBox->setEnabled(true);
+    ui->dac4GroupBox->setEnabled(true);
+    ui->dac5GroupBox->setEnabled(true);
+    ui->dac6GroupBox->setEnabled(true);
+    ui->dac7GroupBox->setEnabled(true);
+    ui->dac8GroupBox->setEnabled(true);
+    ui->dac9GroupBox->setEnabled(true);
+    ui->dac10GroupBox->setEnabled(true);
+    ui->dac11GroupBox->setEnabled(true);
+    ui->dac12GroupBox->setEnabled(true);
 }
 
 void MainWindow::ledModelingInfo(QString message)
 {
     ui->scanInfo->setText(message);
+}
+
+void MainWindow::lsqNonLInStartStop()
+{
+    if (ui->btnStartStopStarSimulator->text().contains("Start Simulator")) {
+        lsqNonLinStart();
+    } else {
+        lsqNonLinStop();
+    }
 }
 
 void MainWindow::lsqNonLinStart()
@@ -630,7 +713,6 @@ void MainWindow::lsqNonLinStart()
         sms500->wait();
     }
 
-
     ui->rbtnFlux->setChecked(true);           // Set SMS500 Operation Mode to Flux
     ui->numberOfScansLineEdit->setText("1");  // Set SMS500 Parameters
     ui->AutoRangeCheckBox->setChecked(true);
@@ -647,19 +729,75 @@ void MainWindow::lsqNonLinStart()
         }
     }
 
+    ui->btnStartStopStarSimulator->setIcon(QIcon(":/pics/stop.png"));
+    ui->btnStartStopStarSimulator->setText("Stop Simulator ");
+    ui->starSettingsGroupBox->setEnabled(false);
+    ui->dampingFactorGroupBox->setEnabled(false);
+    ui->x0GroupBox->setEnabled(false);
+    ui->ledDriverTab->setEnabled(false);
+    ui->longTermStabilityTab->setEnabled(false);
+
+    // x0 type
+    if (ui->x0Random->isChecked()) {
+        lsqnonlin->setx0Type(LSqNonLin::x0Random);
+    } else if (ui->x0UserDefined->isChecked()) {
+        lsqnonlin->setx0Type(LSqNonLin::x0UserDefined, lsqNonLinx0());
+    } else {
+        // Genetic Algorithm here!
+    }
+
+    // Damping Factor
+    if (ui->dampingFactor1->isChecked()) {
+        lsqnonlin->setDampingFactor(LSqNonLin::dampingFactorTechnique1);
+    } else if (ui->dampingFactor2->isChecked()) {
+        lsqnonlin->setDampingFactor(LSqNonLin::dampingFactorTechnique2);
+    } else {
+        lsqnonlin->setDampingFactor(LSqNonLin::dampingFactorFixed, ui->dampingFactorValue->text().toDouble());
+    }
+
     lsqnonlin->start();
+    lsqNonLinTime.start();
+
+    lsqNonLinLog(tr("==================== Star Simulator Start ====================="
+                    "\n%1\n"
+                    "======================================================")
+                 .arg(QDateTime::currentDateTime().toString(Qt::SystemLocaleShortDate)));
+}
+
+void MainWindow::lsqNonLinStop()
+{
+    lsqnonlin->stop();
+
+    ui->btnStartStopStarSimulator->setIcon(QIcon(":/pics/start.png"));
+    ui->btnStartStopStarSimulator->setText("Start Simulator");
+    ui->btnSaveStarSimulatorData->setEnabled(true);
+    ui->starSettingsGroupBox->setEnabled(true);
+    ui->dampingFactorGroupBox->setEnabled(true);
+    ui->x0GroupBox->setEnabled(true);
+    ui->ledDriverTab->setEnabled(true);
+    ui->longTermStabilityTab->setEnabled(true);
+
+    lsqNonLinLog(tr("\n================== Star Simulator Finished ==================="
+                    "\n%1\tElapsed time: %2 seconds\n"
+                    "====================================================\n")
+                 .arg(QDateTime::currentDateTime().toString(Qt::SystemLocaleShortDate))
+                 .arg((lsqNonLinTime.elapsed())));
 }
 
 void MainWindow::lsqNonLinStarSettings()
 {
-    if (lsqStarDialog->exec() == true) {
-        // Plot Star in Least Square page
-    }
+    lsqNonLinStar->setMagnitude(ui->starMagnitude->text().toInt());
+    lsqNonLinStar->setTemperature(ui->starTemperature->text().toInt());
+
+    plotLSqNonLin->setPlotLimits(300, 1100, 0, lsqNonLinStar->peak() * 1.2);
+    plotLSqNonLin->showData(lsqNonLinStar->spectralDataToPlot(), lsqNonLinStar->peak() * 1.2, 1);
+    plotLSqNonLin->showData(lsqNonLinStar->spectralDataToPlot(), lsqNonLinStar->peak() * 1.2, 0);
 }
 
 void MainWindow::lsqNonLinPerformScan()
 {
-    // Plot Star and Data in Least Square page
+    plotLSqNonLin->setPlotLimits(300, 1100, 0, lsqNonLinStar->peak() * 1.2);
+    plotLSqNonLin->showData(lsqNonLinStar->spectralDataToPlot(), lsqNonLinStar->peak() * 1.2, 1);
 
     int dac;
     int port;
@@ -780,16 +918,16 @@ void MainWindow::lsqNonLinObjectiveFunction()
 {
     MatrixXd f(641, 1);
     double *masterData;
-    QVector< QVector<double> > lsqStarData;
+    QVector< QVector<double> > starData;
 
     masterData  = sms500->masterData();
-    lsqStarData = lsqStarDialog->spectralData();
+    starData    = lsqNonLinStar->spectralData();
 
     for (int i = 0; i < sms500->points(); i++) {
         if (masterData[i] < 0) {
-            f(i) = lsqStarData[i][1];
+            f(i) = starData[i][1];
         } else {
-            f(i) = lsqStarData[i][1] - masterData[i];
+            f(i) = starData[i][1] - masterData[i];
         }
     }
 
@@ -802,9 +940,249 @@ void MainWindow::lsqNonLinLoadLedData()
     loadLedData.exec();
 }
 
-void MainWindow::lsqNonLinFinished()
+void MainWindow::lsqNonLinDampingFactorHandle()
 {
-    // ver o que fazer
+    if (ui->dampingFactorFixed->isChecked()) {
+        ui->dampingFactorValue->setEnabled(true);
+    } else {
+        ui->dampingFactorValue->setEnabled(false);
+    }
+}
+
+void MainWindow::lsqNonLinx0Handle()
+{
+    if (ui->x0UserDefined->isChecked()) {
+        ui->initialSolution_ch25->setEnabled(true);
+        ui->initialSolution_ch26->setEnabled(true);
+        ui->initialSolution_ch27->setEnabled(true);
+        ui->initialSolution_ch28->setEnabled(true);
+        ui->initialSolution_ch29->setEnabled(true);
+        ui->initialSolution_ch30->setEnabled(true);
+        ui->initialSolution_ch31->setEnabled(true);
+        ui->initialSolution_ch32->setEnabled(true);
+        ui->initialSolution_ch33->setEnabled(true);
+        ui->initialSolution_ch34->setEnabled(true);
+        ui->initialSolution_ch35->setEnabled(true);
+        ui->initialSolution_ch36->setEnabled(true);
+        ui->initialSolution_ch37->setEnabled(true);
+        ui->initialSolution_ch38->setEnabled(true);
+        ui->initialSolution_ch39->setEnabled(true);
+        ui->initialSolution_ch40->setEnabled(true);
+        ui->initialSolution_ch41->setEnabled(true);
+        ui->initialSolution_ch42->setEnabled(true);
+        ui->initialSolution_ch43->setEnabled(true);
+        ui->initialSolution_ch44->setEnabled(true);
+        ui->initialSolution_ch45->setEnabled(true);
+        ui->initialSolution_ch46->setEnabled(true);
+        ui->initialSolution_ch47->setEnabled(true);
+        ui->initialSolution_ch48->setEnabled(true);
+        ui->initialSolution_ch49->setEnabled(true);
+        ui->initialSolution_ch50->setEnabled(true);
+        ui->initialSolution_ch51->setEnabled(true);
+        ui->initialSolution_ch52->setEnabled(true);
+        ui->initialSolution_ch53->setEnabled(true);
+        ui->initialSolution_ch54->setEnabled(true);
+        ui->initialSolution_ch55->setEnabled(true);
+        ui->initialSolution_ch56->setEnabled(true);
+        ui->initialSolution_ch57->setEnabled(true);
+        ui->initialSolution_ch58->setEnabled(true);
+        ui->initialSolution_ch59->setEnabled(true);
+        ui->initialSolution_ch60->setEnabled(true);
+        ui->initialSolution_ch61->setEnabled(true);
+        ui->initialSolution_ch62->setEnabled(true);
+        ui->initialSolution_ch63->setEnabled(true);
+        ui->initialSolution_ch64->setEnabled(true);
+        ui->initialSolution_ch65->setEnabled(true);
+        ui->initialSolution_ch66->setEnabled(true);
+        ui->initialSolution_ch67->setEnabled(true);
+        ui->initialSolution_ch68->setEnabled(true);
+        ui->initialSolution_ch69->setEnabled(true);
+        ui->initialSolution_ch70->setEnabled(true);
+        ui->initialSolution_ch71->setEnabled(true);
+        ui->initialSolution_ch72->setEnabled(true);
+        ui->initialSolution_ch73->setEnabled(true);
+        ui->initialSolution_ch74->setEnabled(true);
+        ui->initialSolution_ch75->setEnabled(true);
+        ui->initialSolution_ch76->setEnabled(true);
+        ui->initialSolution_ch77->setEnabled(true);
+        ui->initialSolution_ch78->setEnabled(true);
+        ui->initialSolution_ch79->setEnabled(true);
+        ui->initialSolution_ch80->setEnabled(true);
+        ui->initialSolution_ch81->setEnabled(true);
+        ui->initialSolution_ch82->setEnabled(true);
+        ui->initialSolution_ch83->setEnabled(true);
+        ui->initialSolution_ch84->setEnabled(true);
+        ui->initialSolution_ch85->setEnabled(true);
+        ui->initialSolution_ch86->setEnabled(true);
+        ui->initialSolution_ch87->setEnabled(true);
+        ui->initialSolution_ch88->setEnabled(true);
+        ui->initialSolution_ch89->setEnabled(true);
+        ui->initialSolution_ch90->setEnabled(true);
+        ui->initialSolution_ch91->setEnabled(true);
+        ui->initialSolution_ch92->setEnabled(true);
+        ui->initialSolution_ch93->setEnabled(true);
+        ui->initialSolution_ch94->setEnabled(true);
+        ui->initialSolution_ch95->setEnabled(true);
+        ui->initialSolution_ch96->setEnabled(true);
+    } else {
+        ui->initialSolution_ch25->setEnabled(false);
+        ui->initialSolution_ch26->setEnabled(false);
+        ui->initialSolution_ch27->setEnabled(false);
+        ui->initialSolution_ch28->setEnabled(false);
+        ui->initialSolution_ch29->setEnabled(false);
+        ui->initialSolution_ch30->setEnabled(false);
+        ui->initialSolution_ch31->setEnabled(false);
+        ui->initialSolution_ch32->setEnabled(false);
+        ui->initialSolution_ch33->setEnabled(false);
+        ui->initialSolution_ch34->setEnabled(false);
+        ui->initialSolution_ch35->setEnabled(false);
+        ui->initialSolution_ch36->setEnabled(false);
+        ui->initialSolution_ch37->setEnabled(false);
+        ui->initialSolution_ch38->setEnabled(false);
+        ui->initialSolution_ch39->setEnabled(false);
+        ui->initialSolution_ch40->setEnabled(false);
+        ui->initialSolution_ch41->setEnabled(false);
+        ui->initialSolution_ch42->setEnabled(false);
+        ui->initialSolution_ch43->setEnabled(false);
+        ui->initialSolution_ch44->setEnabled(false);
+        ui->initialSolution_ch45->setEnabled(false);
+        ui->initialSolution_ch46->setEnabled(false);
+        ui->initialSolution_ch47->setEnabled(false);
+        ui->initialSolution_ch48->setEnabled(false);
+        ui->initialSolution_ch49->setEnabled(false);
+        ui->initialSolution_ch50->setEnabled(false);
+        ui->initialSolution_ch51->setEnabled(false);
+        ui->initialSolution_ch52->setEnabled(false);
+        ui->initialSolution_ch53->setEnabled(false);
+        ui->initialSolution_ch54->setEnabled(false);
+        ui->initialSolution_ch55->setEnabled(false);
+        ui->initialSolution_ch56->setEnabled(false);
+        ui->initialSolution_ch57->setEnabled(false);
+        ui->initialSolution_ch58->setEnabled(false);
+        ui->initialSolution_ch59->setEnabled(false);
+        ui->initialSolution_ch60->setEnabled(false);
+        ui->initialSolution_ch61->setEnabled(false);
+        ui->initialSolution_ch62->setEnabled(false);
+        ui->initialSolution_ch63->setEnabled(false);
+        ui->initialSolution_ch64->setEnabled(false);
+        ui->initialSolution_ch65->setEnabled(false);
+        ui->initialSolution_ch66->setEnabled(false);
+        ui->initialSolution_ch67->setEnabled(false);
+        ui->initialSolution_ch68->setEnabled(false);
+        ui->initialSolution_ch69->setEnabled(false);
+        ui->initialSolution_ch70->setEnabled(false);
+        ui->initialSolution_ch71->setEnabled(false);
+        ui->initialSolution_ch72->setEnabled(false);
+        ui->initialSolution_ch73->setEnabled(false);
+        ui->initialSolution_ch74->setEnabled(false);
+        ui->initialSolution_ch75->setEnabled(false);
+        ui->initialSolution_ch76->setEnabled(false);
+        ui->initialSolution_ch77->setEnabled(false);
+        ui->initialSolution_ch78->setEnabled(false);
+        ui->initialSolution_ch79->setEnabled(false);
+        ui->initialSolution_ch80->setEnabled(false);
+        ui->initialSolution_ch81->setEnabled(false);
+        ui->initialSolution_ch82->setEnabled(false);
+        ui->initialSolution_ch83->setEnabled(false);
+        ui->initialSolution_ch84->setEnabled(false);
+        ui->initialSolution_ch85->setEnabled(false);
+        ui->initialSolution_ch86->setEnabled(false);
+        ui->initialSolution_ch87->setEnabled(false);
+        ui->initialSolution_ch88->setEnabled(false);
+        ui->initialSolution_ch89->setEnabled(false);
+        ui->initialSolution_ch90->setEnabled(false);
+        ui->initialSolution_ch91->setEnabled(false);
+        ui->initialSolution_ch92->setEnabled(false);
+        ui->initialSolution_ch93->setEnabled(false);
+        ui->initialSolution_ch94->setEnabled(false);
+        ui->initialSolution_ch95->setEnabled(false);
+        ui->initialSolution_ch96->setEnabled(false);
+    }
+}
+
+void MainWindow::lsqNonLinLog(QString info)
+{
+    ui->starSimulatorLog->appendPlainText(info);
+}
+
+MatrixXi MainWindow::lsqNonLinx0()
+{
+    MatrixXi matrix(72, 1);
+
+    matrix(0) = ui->initialSolution_ch25->text().toInt();
+    matrix(1) = ui->initialSolution_ch26->text().toInt();
+    matrix(2) = ui->initialSolution_ch27->text().toInt();
+    matrix(3) = ui->initialSolution_ch28->text().toInt();
+    matrix(4) = ui->initialSolution_ch29->text().toInt();
+    matrix(5) = ui->initialSolution_ch30->text().toInt();
+    matrix(6) = ui->initialSolution_ch31->text().toInt();
+    matrix(7) = ui->initialSolution_ch32->text().toInt();
+    matrix(8) = ui->initialSolution_ch33->text().toInt();
+    matrix(9) = ui->initialSolution_ch34->text().toInt();
+    matrix(10) = ui->initialSolution_ch35->text().toInt();
+    matrix(11) = ui->initialSolution_ch36->text().toInt();
+    matrix(12) = ui->initialSolution_ch37->text().toInt();
+    matrix(13) = ui->initialSolution_ch38->text().toInt();
+    matrix(14) = ui->initialSolution_ch39->text().toInt();
+    matrix(15) = ui->initialSolution_ch40->text().toInt();
+    matrix(16) = ui->initialSolution_ch41->text().toInt();
+    matrix(17) = ui->initialSolution_ch42->text().toInt();
+    matrix(18) = ui->initialSolution_ch43->text().toInt();
+    matrix(19) = ui->initialSolution_ch44->text().toInt();
+    matrix(20) = ui->initialSolution_ch45->text().toInt();
+    matrix(21) = ui->initialSolution_ch46->text().toInt();
+    matrix(22) = ui->initialSolution_ch47->text().toInt();
+    matrix(23) = ui->initialSolution_ch48->text().toInt();
+    matrix(24) = ui->initialSolution_ch49->text().toInt();
+    matrix(25) = ui->initialSolution_ch50->text().toInt();
+    matrix(26) = ui->initialSolution_ch51->text().toInt();
+    matrix(27) = ui->initialSolution_ch52->text().toInt();
+    matrix(28) = ui->initialSolution_ch53->text().toInt();
+    matrix(29) = ui->initialSolution_ch54->text().toInt();
+    matrix(30) = ui->initialSolution_ch55->text().toInt();
+    matrix(31) = ui->initialSolution_ch56->text().toInt();
+    matrix(32) = ui->initialSolution_ch57->text().toInt();
+    matrix(33) = ui->initialSolution_ch58->text().toInt();
+    matrix(34) = ui->initialSolution_ch59->text().toInt();
+    matrix(35) = ui->initialSolution_ch60->text().toInt();
+    matrix(36) = ui->initialSolution_ch61->text().toInt();
+    matrix(37) = ui->initialSolution_ch62->text().toInt();
+    matrix(38) = ui->initialSolution_ch63->text().toInt();
+    matrix(39) = ui->initialSolution_ch64->text().toInt();
+    matrix(40) = ui->initialSolution_ch65->text().toInt();
+    matrix(41) = ui->initialSolution_ch66->text().toInt();
+    matrix(42) = ui->initialSolution_ch67->text().toInt();
+    matrix(43) = ui->initialSolution_ch68->text().toInt();
+    matrix(44) = ui->initialSolution_ch69->text().toInt();
+    matrix(45) = ui->initialSolution_ch70->text().toInt();
+    matrix(46) = ui->initialSolution_ch71->text().toInt();
+    matrix(47) = ui->initialSolution_ch72->text().toInt();
+    matrix(48) = ui->initialSolution_ch73->text().toInt();
+    matrix(49) = ui->initialSolution_ch74->text().toInt();
+    matrix(50) = ui->initialSolution_ch75->text().toInt();
+    matrix(51) = ui->initialSolution_ch76->text().toInt();
+    matrix(52) = ui->initialSolution_ch77->text().toInt();
+    matrix(53) = ui->initialSolution_ch78->text().toInt();
+    matrix(54) = ui->initialSolution_ch79->text().toInt();
+    matrix(55) = ui->initialSolution_ch80->text().toInt();
+    matrix(56) = ui->initialSolution_ch81->text().toInt();
+    matrix(57) = ui->initialSolution_ch82->text().toInt();
+    matrix(58) = ui->initialSolution_ch83->text().toInt();
+    matrix(59) = ui->initialSolution_ch84->text().toInt();
+    matrix(60) = ui->initialSolution_ch85->text().toInt();
+    matrix(61) = ui->initialSolution_ch86->text().toInt();
+    matrix(62) = ui->initialSolution_ch87->text().toInt();
+    matrix(63) = ui->initialSolution_ch88->text().toInt();
+    matrix(64) = ui->initialSolution_ch89->text().toInt();
+    matrix(65) = ui->initialSolution_ch90->text().toInt();
+    matrix(66) = ui->initialSolution_ch91->text().toInt();
+    matrix(67) = ui->initialSolution_ch92->text().toInt();
+    matrix(68) = ui->initialSolution_ch93->text().toInt();
+    matrix(69) = ui->initialSolution_ch94->text().toInt();
+    matrix(70) = ui->initialSolution_ch95->text().toInt();
+    matrix(71) = ui->initialSolution_ch96->text().toInt();
+
+    return matrix;
 }
 
 void MainWindow::longTermStabilityCreateDB()
@@ -936,6 +1314,7 @@ void MainWindow::longTermStabilityStart()
     ui->groupBoxTimeTorun->setEnabled(false);
     ui->groupBoxTimeInterval->setEnabled(false);
     ui->sms500Tab->setEnabled(false);
+    ui->starSimulatorTab->setEnabled(false);
     ui->ledDriverTab->setEnabled(false);
 
     // Adjusts textbox values
@@ -1013,6 +1392,7 @@ void MainWindow::longTermStabilityStop()
     ui->groupBoxTimeTorun->setEnabled(false);
     ui->groupBoxTimeInterval->setEnabled(false);
     ui->sms500Tab->setEnabled(true);
+    ui->starSimulatorTab->setEnabled(true);
     ui->ledDriverTab->setEnabled(true);
 
     // Prevents Database subscrition
@@ -1252,11 +1632,17 @@ void MainWindow::plotScanResult(QPolygonF points, int peakWavelength, double amp
                                 int scanNumber, int integrationTimeIndex, bool satured)
 {
     plotSMS500->setPlotLimits(300, 1100, 0, amplitude);
-    plotLedDriver->setPlotLimits(300, 1100, 0, amplitude);
     plotSMS500->showPeak(peakWavelength, amplitude);
-    plotLedDriver->showPeak(peakWavelength, amplitude);
     plotSMS500->showData(points, amplitude);
+
+    plotLedDriver->setPlotLimits(300, 1100, 0, amplitude);
+    plotLedDriver->showPeak(peakWavelength, amplitude);
     plotLedDriver->showData(points, amplitude);
+
+    if (lsqnonlin->isRunning()) {
+        plotLSqNonLin->showPeak(peakWavelength, amplitude);
+        plotLSqNonLin->showData(points, lsqNonLinStar->peak() * 1.2);
+    }
 
     if (ui->AutoRangeCheckBox->isChecked()) {
         ui->integrationTimeComboBox->setCurrentIndex(integrationTimeIndex);
@@ -1396,7 +1782,7 @@ void MainWindow::uiInputValidator()
 
     QValidator *ledModelingIncDecValidator =
             new QRegExpValidator(QRegExp("^[1-9][0-9]{0,2}$|^1000$"), this);
-    ui->levelDecrement->setValidator(ledModelingIncDecValidator);
+    ui->levelIncDecValue->setValidator(ledModelingIncDecValidator);
 
     QValidator *timeValidator = new QRegExpValidator(QRegExp("^([0-9]|[1-5][0-9]{1})$"), this);
     ui->longTermStabilityMin->setValidator(timeValidator);
@@ -1409,6 +1795,15 @@ void MainWindow::uiInputValidator()
     QValidator *timeInterval =
             new QRegExpValidator(QRegExp("^([1-9][0-9]{0,3})$"), this);
     ui->longTermStabilityTimeInterval->setValidator(timeInterval);
+
+    QValidator *magnitudeValidator = new QRegExpValidator(QRegExp("^[0-9]$"), this);
+    ui->starMagnitude->setValidator(magnitudeValidator);
+
+    QValidator *temperatureValidator = new QRegExpValidator(QRegExp("^[1-9][0-9]{0,5}$"), this);
+    ui->starTemperature->setValidator(temperatureValidator);
+
+    QDoubleValidator *dampingFactorValidator = new QDoubleValidator(0.00001, 10000.0, 5, this);
+    ui->dampingFactorValue->setValidator(dampingFactorValidator);
 
     QValidator *channelValidator =
             new QRegExpValidator(QRegExp("^0$|^[1-9][0-9]{0,2}$|^[1-3][0-9]{0,3}$|^40([0-8][0-9]|[9][0-5])$"), this);
@@ -1484,6 +1879,105 @@ void MainWindow::uiInputValidator()
     ui->dac12channel94->setValidator(channelValidator);
     ui->dac12channel95->setValidator(channelValidator);
     ui->dac12channel96->setValidator(channelValidator);
+
+    // Star Simulator
+    ui->initialSolution_ch01->setValidator(channelValidator);
+    ui->initialSolution_ch02->setValidator(channelValidator);
+    ui->initialSolution_ch03->setValidator(channelValidator);
+    ui->initialSolution_ch04->setValidator(channelValidator);
+    ui->initialSolution_ch05->setValidator(channelValidator);
+    ui->initialSolution_ch06->setValidator(channelValidator);
+    ui->initialSolution_ch07->setValidator(channelValidator);
+    ui->initialSolution_ch08->setValidator(channelValidator);
+    ui->initialSolution_ch09->setValidator(channelValidator);
+    ui->initialSolution_ch10->setValidator(channelValidator);
+    ui->initialSolution_ch11->setValidator(channelValidator);
+    ui->initialSolution_ch12->setValidator(channelValidator);
+    ui->initialSolution_ch13->setValidator(channelValidator);
+    ui->initialSolution_ch14->setValidator(channelValidator);
+    ui->initialSolution_ch15->setValidator(channelValidator);
+    ui->initialSolution_ch16->setValidator(channelValidator);
+    ui->initialSolution_ch17->setValidator(channelValidator);
+    ui->initialSolution_ch18->setValidator(channelValidator);
+    ui->initialSolution_ch19->setValidator(channelValidator);
+    ui->initialSolution_ch20->setValidator(channelValidator);
+    ui->initialSolution_ch21->setValidator(channelValidator);
+    ui->initialSolution_ch22->setValidator(channelValidator);
+    ui->initialSolution_ch23->setValidator(channelValidator);
+    ui->initialSolution_ch24->setValidator(channelValidator);
+    ui->initialSolution_ch25->setValidator(channelValidator);
+    ui->initialSolution_ch26->setValidator(channelValidator);
+    ui->initialSolution_ch27->setValidator(channelValidator);
+    ui->initialSolution_ch28->setValidator(channelValidator);
+    ui->initialSolution_ch29->setValidator(channelValidator);
+    ui->initialSolution_ch30->setValidator(channelValidator);
+    ui->initialSolution_ch31->setValidator(channelValidator);
+    ui->initialSolution_ch32->setValidator(channelValidator);
+    ui->initialSolution_ch33->setValidator(channelValidator);
+    ui->initialSolution_ch34->setValidator(channelValidator);
+    ui->initialSolution_ch35->setValidator(channelValidator);
+    ui->initialSolution_ch36->setValidator(channelValidator);
+    ui->initialSolution_ch37->setValidator(channelValidator);
+    ui->initialSolution_ch38->setValidator(channelValidator);
+    ui->initialSolution_ch39->setValidator(channelValidator);
+    ui->initialSolution_ch40->setValidator(channelValidator);
+    ui->initialSolution_ch41->setValidator(channelValidator);
+    ui->initialSolution_ch42->setValidator(channelValidator);
+    ui->initialSolution_ch43->setValidator(channelValidator);
+    ui->initialSolution_ch44->setValidator(channelValidator);
+    ui->initialSolution_ch45->setValidator(channelValidator);
+    ui->initialSolution_ch46->setValidator(channelValidator);
+    ui->initialSolution_ch47->setValidator(channelValidator);
+    ui->initialSolution_ch48->setValidator(channelValidator);
+    ui->initialSolution_ch49->setValidator(channelValidator);
+    ui->initialSolution_ch50->setValidator(channelValidator);
+    ui->initialSolution_ch51->setValidator(channelValidator);
+    ui->initialSolution_ch52->setValidator(channelValidator);
+    ui->initialSolution_ch53->setValidator(channelValidator);
+    ui->initialSolution_ch54->setValidator(channelValidator);
+    ui->initialSolution_ch55->setValidator(channelValidator);
+    ui->initialSolution_ch56->setValidator(channelValidator);
+    ui->initialSolution_ch57->setValidator(channelValidator);
+    ui->initialSolution_ch58->setValidator(channelValidator);
+    ui->initialSolution_ch59->setValidator(channelValidator);
+    ui->initialSolution_ch60->setValidator(channelValidator);
+    ui->initialSolution_ch61->setValidator(channelValidator);
+    ui->initialSolution_ch62->setValidator(channelValidator);
+    ui->initialSolution_ch63->setValidator(channelValidator);
+    ui->initialSolution_ch64->setValidator(channelValidator);
+    ui->initialSolution_ch65->setValidator(channelValidator);
+    ui->initialSolution_ch66->setValidator(channelValidator);
+    ui->initialSolution_ch67->setValidator(channelValidator);
+    ui->initialSolution_ch68->setValidator(channelValidator);
+    ui->initialSolution_ch69->setValidator(channelValidator);
+    ui->initialSolution_ch70->setValidator(channelValidator);
+    ui->initialSolution_ch71->setValidator(channelValidator);
+    ui->initialSolution_ch72->setValidator(channelValidator);
+    ui->initialSolution_ch73->setValidator(channelValidator);
+    ui->initialSolution_ch74->setValidator(channelValidator);
+    ui->initialSolution_ch75->setValidator(channelValidator);
+    ui->initialSolution_ch76->setValidator(channelValidator);
+    ui->initialSolution_ch77->setValidator(channelValidator);
+    ui->initialSolution_ch78->setValidator(channelValidator);
+    ui->initialSolution_ch79->setValidator(channelValidator);
+    ui->initialSolution_ch80->setValidator(channelValidator);
+    ui->initialSolution_ch81->setValidator(channelValidator);
+    ui->initialSolution_ch82->setValidator(channelValidator);
+    ui->initialSolution_ch83->setValidator(channelValidator);
+    ui->initialSolution_ch84->setValidator(channelValidator);
+    ui->initialSolution_ch85->setValidator(channelValidator);
+    ui->initialSolution_ch86->setValidator(channelValidator);
+    ui->initialSolution_ch87->setValidator(channelValidator);
+    ui->initialSolution_ch88->setValidator(channelValidator);
+    ui->initialSolution_ch89->setValidator(channelValidator);
+    ui->initialSolution_ch90->setValidator(channelValidator);
+    ui->initialSolution_ch91->setValidator(channelValidator);
+    ui->initialSolution_ch92->setValidator(channelValidator);
+    ui->initialSolution_ch93->setValidator(channelValidator);
+    ui->initialSolution_ch94->setValidator(channelValidator);
+    ui->initialSolution_ch95->setValidator(channelValidator);
+    ui->initialSolution_ch96->setValidator(channelValidator);
+
 }
 
 void MainWindow::sms500SignalAndSlot()
@@ -1615,13 +2109,23 @@ void MainWindow::ledDriverSignalAndSlot()
 void MainWindow::lsqNonLinSignalAndSlot()
 {
     connect(lsqnonlin, SIGNAL(ledDataNotFound()), this, SLOT(lsqNonLinLoadLedData()));
-    connect(lsqnonlin, SIGNAL(info(QString)),     this, SLOT(statusBarMessage(QString)));
+    connect(lsqnonlin, SIGNAL(info(QString)),     this, SLOT(lsqNonLinLog(QString)));
     connect(lsqnonlin, SIGNAL(performScan()),     this, SLOT(lsqNonLinPerformScan()));
-    connect(lsqnonlin, SIGNAL(finished()),        this, SLOT(lsqNonLinFinished()));
+    connect(lsqnonlin, SIGNAL(finished()),        this, SLOT(lsqNonLinStop()));
     connect(sms500,    SIGNAL(scanFinished()),    this, SLOT(lsqNonLinObjectiveFunction()));
-    connect(ui->actionLSqNonLinStarSettings, SIGNAL(triggered(bool)), this,  SLOT(lsqNonLinStarSettings()));
-    connect(ui->actionLSqNonLinStart,        SIGNAL(triggered()),     this,  SLOT(lsqNonLinStart()));
-    connect(ui->actionLSqNonLinStop,         SIGNAL(triggered()), lsqnonlin, SLOT(stop()));
+
+    connect(ui->starMagnitude, SIGNAL(editingFinished()), this, SLOT(lsqNonLinStarSettings()));
+    connect(ui->starTemperature, SIGNAL(editingFinished()), this, SLOT(lsqNonLinStarSettings()));
+
+    connect(ui->btnStartStopStarSimulator, SIGNAL(clicked()), this, SLOT(lsqNonLInStartStop()));
+
+    connect(ui->x0Random, SIGNAL(toggled(bool)), this, SLOT(lsqNonLinx0Handle()));
+    connect(ui->x0UserDefined, SIGNAL(toggled(bool)), this, SLOT(lsqNonLinx0Handle()));
+    connect(ui->x0AGSearch, SIGNAL(toggled(bool)), this, SLOT(lsqNonLinx0Handle()));
+
+    connect(ui->dampingFactor1, SIGNAL(toggled(bool)), this, SLOT(lsqNonLinDampingFactorHandle()));
+    connect(ui->dampingFactor2, SIGNAL(toggled(bool)), this, SLOT(lsqNonLinDampingFactorHandle()));
+    connect(ui->dampingFactorFixed, SIGNAL(toggled(bool)), this, SLOT(lsqNonLinDampingFactorHandle()));
 }
 
 void MainWindow::longTermStabilitySignalAndSlot()
@@ -1637,4 +2141,3 @@ void MainWindow::longTermStabilitySignalAndSlot()
     connect(ui->btnExportAllLongTermStability, SIGNAL(clicked()), this, SLOT(longTermStabilityExportAll()));
     connect(ui->tableView, SIGNAL(clicked(QModelIndex)), this, SLOT(longTermStabilityHandleTableSelection()));
 }
-

@@ -20,10 +20,10 @@ SOURCES += main.cpp\
     lsqloadleddata.cpp \
     lsqloadleddatadialog.cpp \
     lsqnonlin.cpp \
-    lsqstardatadialog.cpp \
     longtermstabilityexportdialog.cpp \
     longtermstability.cpp \
-    longtermstabilityalarmclock.cpp
+    longtermstabilityalarmclock.cpp \
+    star.cpp
 
 HEADERS  += mainwindow.h \
     aboutsmsdialog.h \
@@ -35,15 +35,14 @@ HEADERS  += mainwindow.h \
     lsqloadleddata.h \
     lsqloadleddatadialog.h \
     lsqnonlin.h \
-    lsqstardatadialog.h \
     longtermstabilityexportdialog.h \
     longtermstability.h \
-    longtermstabilityalarmclock.h
+    longtermstabilityalarmclock.h \
+    star.h
 
 FORMS    += mainwindow.ui \
     aboutsmsdialog.ui \
     lsqloadleddatadialog.ui \
-    lsqstardatadialog.ui \
     longtermstabilityexportdialog.ui
 
 RESOURCES += \

@@ -1,52 +1,38 @@
-#include "lsqstardatadialog.h"
-#include "ui_lsqstardatadialog.h"
+#include "star.h"
 
-LSqStarDataDialog::LSqStarDataDialog(QWidget *parent) :
-    QDialog(parent),
-    ui(new Ui::LSqStarDataDialog)
+Star::Star(QObject *parent) :
+    QObject(parent)
 {
-    ui->setupUi(this);
-    QValidator *magnitudeValidator = new QRegExpValidator(QRegExp("^[0-9]$"), this);
-    ui->magnitude->setValidator(magnitudeValidator);
-
-    QValidator *temperatureValidator = new QRegExpValidator(QRegExp("^[1-9][0-9]{0,5}$"), this);
-    ui->temperature->setValidator(temperatureValidator);
-
-    setMagnitude("0");
-    setTemperature("7500");
+    starMagnitude = 0;
+    starTemperature = 7500;
 }
 
-LSqStarDataDialog::~LSqStarDataDialog()
+int Star::magnitude()
 {
-    delete ui;
+    return starMagnitude;
 }
 
-void LSqStarDataDialog::setMagnitude(const QString &magnitude) const
+int Star::temperature()
 {
-    ui->magnitude->setText(magnitude);
+    return starTemperature;
 }
 
-void LSqStarDataDialog::setTemperature(const QString & temperature) const
-{
-    ui->temperature->setText(temperature);
-}
-
-int LSqStarDataDialog::magnitude()
-{
-    return ui->magnitude->text().toInt();
-}
-
-int LSqStarDataDialog::temperature()
-{
-    return ui->temperature->text().toInt();
-}
-
-double LSqStarDataDialog::peak()
+double Star::peak()
 {
     return starPeak;
 }
 
-QVector< QVector<double> > LSqStarDataDialog::spectralData()
+void Star::setMagnitude(int magnitude)
+{
+    starMagnitude = magnitude;
+}
+
+void Star::setTemperature(int temperature)
+{
+    starTemperature = temperature;
+}
+
+QVector<QVector<double> > Star::spectralData()
 {
     // Spectral Power Distribution of a model Star (W/cm^2/nm)
     //
@@ -74,14 +60,14 @@ QVector< QVector<double> > LSqStarDataDialog::spectralData()
         WL[i] = (i + 360) * 1e-9;
 
         // Blackbody in W/m^2/m
-        starData[i][1] = (2 * M_PI * h * pow(c,2)) / (pow(WL[i],5) * (exp((h * c) / (k * WL[i] * temperature())) - 1));
+        starData[i][1] = (2 * M_PI * h * pow(c,2)) / (pow(WL[i],5) * (exp((h * c) / (k * WL[i] * starTemperature)) - 1));
     }
 
     // Finds irradiance value at 550nm [wavelength = 360 : 1 : 1000]
     int index550 = 190;
 
     // Calculates Apparent Magnitude Transference Function
-    double visualMagnitude = pow(10,(-0.4 * magnitude())) * 4e-15;
+    double visualMagnitude = pow(10,(-0.4 * starMagnitude)) * 4e-15;
 
     double conversionFactor550 = visualMagnitude / starData[index550][1];
 
@@ -105,7 +91,7 @@ QVector< QVector<double> > LSqStarDataDialog::spectralData()
     return starData;
 }
 
-QPolygonF LSqStarDataDialog::spectralDataToPlot()
+QPolygonF Star::spectralDataToPlot()
 {
     QPolygonF spectralDataToPlot;
     QVector< QVector<double> > starData = spectralData();
