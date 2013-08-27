@@ -152,7 +152,7 @@ void LSqNonLin::run()
     for (int i = 0; i < 5000; i++) {
         msleep(1); // wait 1ms for continue, see Qt Thread's Documentation
         if (stopThread == true) {
-            break;
+            return;
         }
 
         getObjectiveFunction(xCurrent);

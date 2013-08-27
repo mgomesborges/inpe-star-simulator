@@ -269,7 +269,7 @@ void LedDriver::run()
             // Waiting Save Data
             timer.restart();
             while ((enabledModeling == true) && (enabledContinue == false)) {
-                if (timer.elapsed() >= 5000) {
+                if (timer.elapsed() >= 300000) {
                     emit warningMessage(tr("LED Driver Error"), tr("Wait Time Exceeded.\nWaiting for Save Data"));
                     emit modelingFinished();
                     stop();

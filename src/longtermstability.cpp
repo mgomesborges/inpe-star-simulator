@@ -265,7 +265,13 @@ bool LongTermStability::saveScanData(
                       "VALUES (:scan_number, :wavelength, :intensity)");
         query.bindValue(":scan_number", scanNumber);
         query.bindValue(":wavelength", i);
-        query.bindValue(":intensity", masterData[i - startWavelength]);
+
+        if (masterData[i - startWavelength] < 0) {
+            query.bindValue(":intensity", 0);
+        } else {
+            query.bindValue(":intensity", masterData[i - startWavelength]);
+        }
+
         if (query.exec() == false) {
             lastErrorMessage = tr("Error: cannot store SMS500 and LED Driver data in table.");
             return false;

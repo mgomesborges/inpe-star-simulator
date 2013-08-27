@@ -137,26 +137,26 @@ void MainWindow::sms500SaveScanData(const QString &filePath)
 
     QString currentTime(QDateTime::currentDateTime().toString(Qt::SystemLocaleShortDate));
     out << "Star Simulator file, Platform: Windows, Created on: " << currentTime << "\n";
-    out << "\nStart wavelength.......: " << sms500->startWavelength();
-    out << "\nStop wavelength........: " << sms500->stopWavelength();
-    out << "\nDominate wavelength....: " << sms500->dominanteWavelength();
-    out << "\nPeak wavelength........: " << sms500->peakWavelength();
-    out << "\nPower (W)..............: " << sms500->power();
-    out << "\nIntegration time (ms)..: " << sms500->integrationTime();
-    out << "\nSamples to Average.....: " << sms500->samplesToAverage();
-    out << "\nBoxcar Smoothing.......: " << sms500->boxCarSmoothing();
+    out << "\nStart wavelength........: " << sms500->startWavelength();
+    out << "\nStop wavelength.........: " << sms500->stopWavelength();
+    out << "\nDominate wavelength.....: " << sms500->dominanteWavelength();
+    out << "\nPeak wavelength.........: " << sms500->peakWavelength();
+    out << "\nPower (W)...............: " << sms500->power();
+    out << "\nIntegration time (ms)...: " << sms500->integrationTime();
+    out << "\nSamples to Average......: " << sms500->samplesToAverage();
+    out << "\nBoxcar Smoothing........: " << sms500->boxCarSmoothing();
     if (sms500->isNoiseReductionEnabled()) {
-        out << "\nNoise Reduction........: " << sms500->noiseReduction();
+        out << "\nNoise Reduction.........: " << sms500->noiseReduction();
     } else {
-        out << "\nNoise Reduction........: 0";
+        out << "\nNoise Reduction.........: 0";
     }
     if (sms500->isDynamicDarkEnabled()) {
-        out << "\nCorrec for Dynamic Dark: yes";
+        out << "\nCorrect for Dynamic Dark: yes";
     } else {
-        out << "\nCorrec for Dynamic Dark: no";
+        out << "\nCorrect for Dynamic Dark: no";
     }
-    out << "\nPurity.................: " << sms500->purity();
-    out << "\nFWHM...................: " << sms500->fwhm() << "\n";
+    out << "\nPurity..................: " << sms500->purity();
+    out << "\nFWHM....................: " << sms500->fwhm() << "\n";
     out << "\nHolds the Wavelength Data:";
     out << "\nnm\tuW/nm\n";
 
@@ -576,8 +576,8 @@ void MainWindow::ledModelingSaveData(QString fileName)
     ui->scanNumberLabel->setText(tr("    Scan number: %1").arg(ledModelingScanNumber));
     ui->scanNumberLabel_2->setText(tr("    Scan number: %1").arg(ledModelingScanNumber));
 
-    // Stop Condition = maxMasterData < 0 and Level Decrement
-    if ((sms500->maxMasterData() < 0) && (ui->levelIncDecComboBox->currentIndex() == 0)) {
+    // Stop Condition = maxMasterData <= 0 and Level Decrement
+    if ((sms500->maxMasterData() <= 0) && (ui->levelIncDecComboBox->currentIndex() == 0)) {
         ledDriver->modelingNextChannel();
     }
 
@@ -616,19 +616,19 @@ void MainWindow::ledModelingSaveChannelData(QString channel)
 
     QString currentTime(QDateTime::currentDateTime().toString(Qt::SystemLocaleShortDate));
     out << "Star Simulator file, Platform: Windows, Created on: " << currentTime << "\n";
-    out << "\nStart wavelength.......: " << sms500->startWavelength();
-    out << "\nStop wavelength........: " << sms500->stopWavelength();
-    out << "\nSamples to Average.....: " << sms500->samplesToAverage();
-    out << "\nBoxcar Smoothing.......: " << sms500->boxCarSmoothing();
+    out << "\nStart wavelength........: " << sms500->startWavelength();
+    out << "\nStop wavelength.........: " << sms500->stopWavelength();
+    out << "\nSamples to Average......: " << sms500->samplesToAverage();
+    out << "\nBoxcar Smoothing........: " << sms500->boxCarSmoothing();
     if (sms500->isNoiseReductionEnabled()) {
-        out << "\nNoise Reduction........: " << sms500->noiseReduction();
+        out << "\nNoise Reduction.........: " << sms500->noiseReduction();
     } else {
-        out << "\nNoise Reduction........: 0";
+        out << "\nNoise Reduction.........: 0";
     }
     if (sms500->isDynamicDarkEnabled()) {
-        out << "\nCorrec for Dynamic Dark: yes\n";
+        out << "\nCorrect for Dynamic Dark: yes\n";
     } else {
-        out << "\nCorrec for Dynamic Dark: no\n";
+        out << "\nCorrect for Dynamic Dark: no\n";
     }
     out << "\nHolds the Wavelength Data:";
     out << "\nnm\tuW/nm/Digital Level\n\n";
@@ -767,6 +767,7 @@ void MainWindow::lsqNonLinStart()
 void MainWindow::lsqNonLinStop()
 {
     lsqnonlin->stop();
+    lsqnonlin->wait();
 
     ui->btnStartStopStarSimulator->setIcon(QIcon(":/pics/start.png"));
     ui->btnStartStopStarSimulator->setText("Start Simulator");
@@ -1356,9 +1357,6 @@ void MainWindow::longTermStabilityStart()
         ui->stopLongTermStabilityLabel->show();
     }
 
-    longTermStabilityAlarmClock->setAlarmClock(hour, min, sec, secTimeInterval);
-    longTermStabilityAlarmClock->start();
-
     // Save SMS500 and LED Driver parameters into database
     int noiseReduction = 0;
     if (ui->noiseReductionCheckBox->isChecked()) {
@@ -1378,6 +1376,9 @@ void MainWindow::longTermStabilityStart()
                 noiseReduction,
                 ui->dynamicDarkCheckBox->isChecked(),
                 channelValues);
+
+    longTermStabilityAlarmClock->setAlarmClock(hour, min, sec, secTimeInterval);
+    longTermStabilityAlarmClock->start();
 }
 
 void MainWindow::longTermStabilityStop()
