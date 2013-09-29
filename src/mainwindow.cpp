@@ -767,8 +767,10 @@ void MainWindow::lsqNonLinStart()
 void MainWindow::lsqNonLinStop()
 {
     lsqnonlin->stop();
-    lsqnonlin->wait();
+}
 
+void MainWindow::lsqNonLinFinished()
+{
     ui->btnStartStopStarSimulator->setIcon(QIcon(":/pics/start.png"));
     ui->btnStartStopStarSimulator->setText("Start Simulator");
     ui->btnSaveStarSimulatorData->setEnabled(true);
@@ -2112,7 +2114,7 @@ void MainWindow::lsqNonLinSignalAndSlot()
     connect(lsqnonlin, SIGNAL(ledDataNotFound()), this, SLOT(lsqNonLinLoadLedData()));
     connect(lsqnonlin, SIGNAL(info(QString)),     this, SLOT(lsqNonLinLog(QString)));
     connect(lsqnonlin, SIGNAL(performScan()),     this, SLOT(lsqNonLinPerformScan()));
-    connect(lsqnonlin, SIGNAL(finished()),        this, SLOT(lsqNonLinStop()));
+    connect(lsqnonlin, SIGNAL(finished()),        this, SLOT(lsqNonLinFinished()));
     connect(sms500,    SIGNAL(scanFinished()),    this, SLOT(lsqNonLinObjectiveFunction()));
 
     connect(ui->starMagnitude, SIGNAL(editingFinished()), this, SLOT(lsqNonLinStarSettings()));

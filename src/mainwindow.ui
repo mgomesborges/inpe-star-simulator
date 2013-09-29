@@ -58,7 +58,7 @@
        </sizepolicy>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="sms500Tab">
        <attribute name="title">
@@ -284,8 +284,8 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>214</width>
-               <height>396</height>
+               <width>196</width>
+               <height>386</height>
               </rect>
              </property>
              <attribute name="label">
@@ -3976,7 +3976,7 @@ p, li { white-space: pre-wrap; }
               <string>Search technique 1</string>
              </property>
              <property name="checked">
-              <bool>true</bool>
+              <bool>false</bool>
              </property>
             </widget>
            </item>
@@ -3984,6 +3984,9 @@ p, li { white-space: pre-wrap; }
             <widget class="QRadioButton" name="dampingFactorFixed">
              <property name="text">
               <string>Fixed</string>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
              </property>
             </widget>
            </item>
@@ -4000,7 +4003,7 @@ p, li { white-space: pre-wrap; }
            <item row="1" column="1">
             <widget class="QLineEdit" name="dampingFactorValue">
              <property name="enabled">
-              <bool>false</bool>
+              <bool>true</bool>
              </property>
              <property name="minimumSize">
               <size>
@@ -4015,7 +4018,7 @@ p, li { white-space: pre-wrap; }
               </size>
              </property>
              <property name="text">
-              <string>0.1</string>
+              <string>7.0</string>
              </property>
             </widget>
            </item>

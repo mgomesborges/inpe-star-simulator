@@ -129,6 +129,7 @@ private slots:
     void lsqNonLInStartStop();
     void lsqNonLinStart();
     void lsqNonLinStop();
+    void lsqNonLinFinished();
     void lsqNonLinStarSettings();
     void lsqNonLinPerformScan();
     void lsqNonLinObjectiveFunction();

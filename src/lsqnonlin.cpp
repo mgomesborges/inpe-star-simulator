@@ -105,6 +105,7 @@ void LSqNonLin::run()
         initialized = true;
     } else {
         resetToDefault();
+        emit finished();
         return;
     }
 
@@ -148,13 +149,7 @@ void LSqNonLin::run()
         // damping factor technique 2
     }
 
-
     for (int i = 0; i < 5000; i++) {
-        msleep(1); // wait 1ms for continue, see Qt Thread's Documentation
-        if (stopThread == true) {
-            return;
-        }
-
         getObjectiveFunction(xCurrent);
         jacobian(xCurrent);
 
@@ -189,6 +184,11 @@ void LSqNonLin::run()
         // fxPrevious = sqrt( sum(objectiveFunction^2) );
         temp       = objectiveFunction.array().pow(2);
         fxPrevious = sqrt( temp.sum() );
+
+        msleep(1); // wait 1ms for continue, see Qt Thread's Documentation
+        if (stopThread == true) {
+            break;
+        }
 
         // fxCurrent = sqrt( sum(objectiveFunction^2) );
         getObjectiveFunction(xCurrent); // Get fxCurrent with new xCurrent value
