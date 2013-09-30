@@ -91,12 +91,6 @@ void LSqNonLin::setx0Type(int x0SearchType, MatrixXi x)
     x0     = x;
 }
 
-void LSqNonLin::setDampingFactor(int type, double value)
-{
-    dampingFactorType = type;
-    dampingFactor     = value;
-}
-
 void LSqNonLin::run()
 {
     stopThread = false;
@@ -113,11 +107,13 @@ void LSqNonLin::run()
     double alpha;
     double fxCurrent;
     double fxPrevious;
+    double fxBest;
     MatrixXd I;
     MatrixXd temp;
     MatrixXd deltaND;
     MatrixXi xCurrent(72,1);
     MatrixXi xPrevious(72,1);
+    MatrixXi xBest(72,1);
 
     // Initial Solution
     if (x0Type == x0Random) {
@@ -139,17 +135,11 @@ void LSqNonLin::run()
         }
     }
 
+    alpha        = 6.5; // Empirical value
+    fxBest       = 1e9;// Big number
     stopCriteria = 0;
 
-    if (dampingFactorType == dampingFactorFixed) {
-        alpha = dampingFactor;
-    } else if (dampingFactorTechnique1) {
-        alpha = getAlpha( xCurrent );
-    } else {
-        // damping factor technique 2
-    }
-
-    for (int i = 0; i < 5000; i++) {
+    for (int i = 0; i < 1000; i++) {
         getObjectiveFunction(xCurrent);
         jacobian(xCurrent);
 
@@ -185,6 +175,12 @@ void LSqNonLin::run()
         temp       = objectiveFunction.array().pow(2);
         fxPrevious = sqrt( temp.sum() );
 
+        // Best solution
+        if (fxPrevious < fxBest) {
+            xBest  = xPrevious;
+            fxBest = fxPrevious;
+        }
+
         msleep(1); // wait 1ms for continue, see Qt Thread's Documentation
         if (stopThread == true) {
             break;
@@ -195,28 +191,20 @@ void LSqNonLin::run()
         temp       = objectiveFunction.array().pow(2);
         fxCurrent  = sqrt( temp.sum() );
 
-        if (fxCurrent > fxPrevious) {
-            xCurrent  = xPrevious;
-            fxCurrent = fxPrevious;
-
-            if (dampingFactorType == dampingFactorFixed) {
-                alpha = dampingFactor;
-            } else if (dampingFactorTechnique1) {
-                alpha = getAlpha( xCurrent );
-            } else {
-                // damping factor technique 2
-            }
-
+        // Stop Criteria
+        if (fxCurrent > fxBest) {
             stopCriteria++;
 
-            if (stopCriteria == 5) {
-                emit info(tr("\n\nLeast Square Finished by Stop Criteria: f(x) = %1").arg(fxCurrent));
+            if (stopCriteria == 20) {
+                getObjectiveFunction(xBest); // Update solution available in getSolution() method
+                emit info(tr("\n\nLeast Square Finished by Stop Criteria: f(x) = %1").arg(fxBest));
                 break;
             }
         } else {
             stopCriteria = 0;
-            emit info(tr("Iteration: %1\tf(x): %2\tAlpha: %3").arg(i).arg(fxCurrent).arg(alpha));
         }
+
+        emit info(tr("Iteration: %1\tf(x): %2\tf(x)_best: %3\tDamping factor: %4").arg(i).arg(fxCurrent).arg(fxBest).arg(alpha));
     }
 
     emit finished();
@@ -224,8 +212,7 @@ void LSqNonLin::run()
 
 void LSqNonLin::resetToDefault()
 {
-    x0Type            = x0Random;
-    dampingFactorType = dampingFactorTechnique1;
+    x0Type = x0Random;
 }
 
 void LSqNonLin::jacobian(const MatrixXi &x)
@@ -261,95 +248,4 @@ MatrixXi LSqNonLin::getSolution()
     return solution;
 }
 
-double LSqNonLin::getAlpha(const MatrixXi &xCurrent)
-{
-    double fx0;
-    double fx1;
-    double alpha;
-    double alphaPrevious;
-    MatrixXd I;
-    MatrixXd temp;
-    MatrixXd deltaND;
-    MatrixXi x0(72, 1);
-    MatrixXi x1(72, 1);
-
-    alpha  = 10;
-
-    getObjectiveFunction(xCurrent);
-    jacobian(xCurrent);
-
-    // Diagonal Matrix :: I = diag(diag((J'*J)));
-    I    = jacobianMatrix.transpose() * jacobianMatrix;
-    temp = I.diagonal();
-    I    = temp.asDiagonal();
-
-    while (true) {
-        msleep(1); // wait 1ms for continue, see Qt Thread's Documentation
-        if (stopThread == true) {
-            return alpha;
-        }
-
-        // x0 --------------------------------
-        // deltaND = inv(J'*J + alpha * I) * J' * objectiveFunction;
-        temp = (jacobianMatrix.transpose() * jacobianMatrix + alpha * I);
-        deltaND = temp.inverse() * jacobianMatrix.transpose() * objectiveFunction;
-
-        // x0 = xCurrent + deltaND
-        for (int row = 0; row < xCurrent.rows(); row++) {
-            x0(row) = xCurrent(row) + round(deltaND(row));
-
-            // Impose a bound constraint for maximum value
-            if (x0(row) > 4095) {
-                x0(row) = 4095;
-            }
-
-            // Impose a bound constraint for minimum value
-            if (x0(row) < minimumDigitalLevelByChannel(row)){
-                x0(row) = minimumDigitalLevelByChannel(row);
-            }
-        }
-
-        // New value for alpha
-        alphaPrevious = alpha;
-        alpha         = alpha - (alpha * 0.30);
-
-        // x1 --------------------------------
-        // deltaND = inv(J'*J + alpha * I) * J' * objectiveFunction;
-        temp = (jacobianMatrix.transpose() * jacobianMatrix + alpha * I);
-        deltaND = temp.inverse() * jacobianMatrix.transpose() * objectiveFunction;
-
-        // x1 = xCurrent + deltaND
-        for (int row = 0; row < xCurrent.rows(); row++) {
-            x1(row) = xCurrent(row) + round(deltaND(row));
-
-            // Impose a bound constraint for maximum value
-            if (x1(row) > 4095) {
-                x1(row) = 4095;
-            }
-
-            // Impose a bound constraint for minimum value
-            if (x1(row) < minimumDigitalLevelByChannel(row)){
-                x1(row) = minimumDigitalLevelByChannel(row);
-            }
-        }
-
-        // fx0 = sqrt( sum(objectiveFunction^2) );
-        getObjectiveFunction(x0);
-        temp = objectiveFunction.array().pow(2);
-        fx0  = sqrt( temp.sum() );
-
-        // fx1 = sqrt( sum(objectiveFunction^2) );
-        getObjectiveFunction(x1);
-        temp = objectiveFunction.array().pow(2);
-        fx1  = sqrt( temp.sum() );
-
-        emit info(tr("  Getting Alpha:\tfx0: %1\tfx1: %2\talpha: %3").arg(fx0).arg(fx1).arg(alpha));
-
-        // Stopping condition
-        if (fx1 > fx0) {
-
-            return alphaPrevious;
-        }
-    }
-}
 

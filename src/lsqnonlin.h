@@ -31,7 +31,6 @@ public:
     int randomInt(int low, int high);
     bool loadDerivates();
     void setx0Type(int x0SearchType, MatrixXi x = MatrixXi());
-    void setDampingFactor(int type, double value = 0);
 
 signals:
     void ledDataNotFound();
@@ -42,7 +41,6 @@ signals:
 public slots:
     void stop();
     void jacobian(const MatrixXi &x);
-    double getAlpha(const MatrixXi &xCurrent);
     void getObjectiveFunction(const MatrixXi &x);
     void setObjectiveFunction(const MatrixXd &value);
     MatrixXi getSolution();
@@ -52,8 +50,6 @@ private:
     bool enabledToContinue;
     bool stopThread;
     int x0Type;
-    int dampingFactorType;
-    double dampingFactor;
     MatrixXi x0;
     MatrixXi solution;
     MatrixXd jacobianMatrix;

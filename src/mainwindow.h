@@ -134,7 +134,6 @@ private slots:
     void lsqNonLinPerformScan();
     void lsqNonLinObjectiveFunction();
     void lsqNonLinLoadLedData();
-    void lsqNonLinDampingFactorHandle();
     void lsqNonLinx0Handle();
     void lsqNonLinLog(QString info);
 

@@ -731,8 +731,8 @@ void MainWindow::lsqNonLinStart()
 
     ui->btnStartStopStarSimulator->setIcon(QIcon(":/pics/stop.png"));
     ui->btnStartStopStarSimulator->setText("Stop Simulator ");
+    ui->btnSaveStarSimulatorData->setEnabled(false);
     ui->starSettingsGroupBox->setEnabled(false);
-    ui->dampingFactorGroupBox->setEnabled(false);
     ui->x0GroupBox->setEnabled(false);
     ui->ledDriverTab->setEnabled(false);
     ui->longTermStabilityTab->setEnabled(false);
@@ -744,15 +744,6 @@ void MainWindow::lsqNonLinStart()
         lsqnonlin->setx0Type(LSqNonLin::x0UserDefined, lsqNonLinx0());
     } else {
         // Genetic Algorithm here!
-    }
-
-    // Damping Factor
-    if (ui->dampingFactor1->isChecked()) {
-        lsqnonlin->setDampingFactor(LSqNonLin::dampingFactorTechnique1);
-    } else if (ui->dampingFactor2->isChecked()) {
-        lsqnonlin->setDampingFactor(LSqNonLin::dampingFactorTechnique2);
-    } else {
-        lsqnonlin->setDampingFactor(LSqNonLin::dampingFactorFixed, ui->dampingFactorValue->text().toDouble());
     }
 
     lsqnonlin->start();
@@ -775,7 +766,6 @@ void MainWindow::lsqNonLinFinished()
     ui->btnStartStopStarSimulator->setText("Start Simulator");
     ui->btnSaveStarSimulatorData->setEnabled(true);
     ui->starSettingsGroupBox->setEnabled(true);
-    ui->dampingFactorGroupBox->setEnabled(true);
     ui->x0GroupBox->setEnabled(true);
     ui->ledDriverTab->setEnabled(true);
     ui->longTermStabilityTab->setEnabled(true);
@@ -941,15 +931,6 @@ void MainWindow::lsqNonLinLoadLedData()
 {
     LSqLoadLedDataDialog loadLedData;
     loadLedData.exec();
-}
-
-void MainWindow::lsqNonLinDampingFactorHandle()
-{
-    if (ui->dampingFactorFixed->isChecked()) {
-        ui->dampingFactorValue->setEnabled(true);
-    } else {
-        ui->dampingFactorValue->setEnabled(false);
-    }
 }
 
 void MainWindow::lsqNonLinx0Handle()
@@ -1799,14 +1780,11 @@ void MainWindow::uiInputValidator()
             new QRegExpValidator(QRegExp("^([1-9][0-9]{0,3})$"), this);
     ui->longTermStabilityTimeInterval->setValidator(timeInterval);
 
-    QValidator *magnitudeValidator = new QRegExpValidator(QRegExp("^[0-9]$"), this);
+    QValidator *magnitudeValidator = new QRegExpValidator(QRegExp("^-[1-9]|[0-9]$"), this);
     ui->starMagnitude->setValidator(magnitudeValidator);
 
     QValidator *temperatureValidator = new QRegExpValidator(QRegExp("^[1-9][0-9]{0,5}$"), this);
     ui->starTemperature->setValidator(temperatureValidator);
-
-    QDoubleValidator *dampingFactorValidator = new QDoubleValidator(0.00001, 10000.0, 5, this);
-    ui->dampingFactorValue->setValidator(dampingFactorValidator);
 
     QValidator *channelValidator =
             new QRegExpValidator(QRegExp("^0$|^[1-9][0-9]{0,2}$|^[1-3][0-9]{0,3}$|^40([0-8][0-9]|[9][0-5])$"), this);
@@ -2125,10 +2103,6 @@ void MainWindow::lsqNonLinSignalAndSlot()
     connect(ui->x0Random, SIGNAL(toggled(bool)), this, SLOT(lsqNonLinx0Handle()));
     connect(ui->x0UserDefined, SIGNAL(toggled(bool)), this, SLOT(lsqNonLinx0Handle()));
     connect(ui->x0AGSearch, SIGNAL(toggled(bool)), this, SLOT(lsqNonLinx0Handle()));
-
-    connect(ui->dampingFactor1, SIGNAL(toggled(bool)), this, SLOT(lsqNonLinDampingFactorHandle()));
-    connect(ui->dampingFactor2, SIGNAL(toggled(bool)), this, SLOT(lsqNonLinDampingFactorHandle()));
-    connect(ui->dampingFactorFixed, SIGNAL(toggled(bool)), this, SLOT(lsqNonLinDampingFactorHandle()));
 }
 
 void MainWindow::longTermStabilitySignalAndSlot()
