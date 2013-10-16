@@ -72,6 +72,7 @@ private:
     LSqNonLin *lsqnonlin;
     Plot *plotLSqNonLin;
     QTime lsqNonLinTime;
+    QVector<double> transferenceFunction;
 
     LongTermStability *longTermStability;
     LongTermStabilityAlarmClock *longTermStabilityAlarmClock;
@@ -126,7 +127,7 @@ private slots:
     void ledModelingFinished();
     void ledModelingInfo(QString message);
 
-    void lsqNonLInStartStop();
+    void lsqNonLinStartStop();
     void lsqNonLinStart();
     void lsqNonLinStop();
     void lsqNonLinFinished();
@@ -136,6 +137,8 @@ private slots:
     void lsqNonLinLoadLedData();
     void lsqNonLinx0Handle();
     void lsqNonLinLog(QString info);
+    bool starLoadTransferenceFunction();
+    bool starUpdateTransferenceFunction();
 
     void longTermStabilityCreateDB();
     void longTermStabilityOpenDB();

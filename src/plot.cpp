@@ -37,7 +37,7 @@ void Plot::showData(QPolygonF points, double amplitude, int curveNumber)
 {
     setAxisMaxMajor(QwtPlot::xBottom, 10);
     setAxisMaxMinor(QwtPlot::xBottom, 5);
-    setAxisScale(QwtPlot::yLeft, 0.0, amplitude);
+    setAxisScale(QwtPlot::yLeft, 0, amplitude);
     setAxisScale(QwtPlot::xBottom, xLimitMin, xLimitMax, 100);
     plotCurve[curveNumber]->setSamples(points);
     this->replot();

@@ -6506,6 +6506,9 @@ p, li { white-space: pre-wrap; }
                <height>16777215</height>
               </size>
              </property>
+             <property name="inputMethodHints">
+              <set>Qt::ImhNone</set>
+             </property>
              <property name="text">
               <string>0</string>
              </property>
@@ -7041,7 +7044,14 @@ Database</string>
     <addaction name="actionAboutSMS500"/>
     <addaction name="actionAboutThisSoftware"/>
    </widget>
+   <widget class="QMenu" name="menuStarSimulatorSettings">
+    <property name="title">
+     <string>&amp;Star Simulator Settings</string>
+    </property>
+    <addaction name="actionLoadTransferenceFunction"/>
+   </widget>
    <addaction name="menuCalibration"/>
+   <addaction name="menuStarSimulatorSettings"/>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
@@ -7081,6 +7091,11 @@ Database</string>
   <action name="actionLSqNonLinStop">
    <property name="text">
     <string>Stop Least Square</string>
+   </property>
+  </action>
+  <action name="actionLoadTransferenceFunction">
+   <property name="text">
+    <string>&amp;Load transference function table</string>
    </property>
   </action>
  </widget>

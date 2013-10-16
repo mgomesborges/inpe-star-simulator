@@ -135,8 +135,8 @@ void LSqNonLin::run()
         }
     }
 
-    alpha        = 6.5; // Empirical value
-    fxBest       = 1e9;// Big number
+    alpha        = 6.5;  // Empirical value
+    fxBest       = 1e15; // Big number
     stopCriteria = 0;
 
     for (int i = 0; i < 1000; i++) {

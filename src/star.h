@@ -25,7 +25,6 @@ private:
     int starMagnitude;
     int starTemperature;
     double starPeak;
-
 };
 
 #endif // STAR_H

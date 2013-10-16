@@ -29,6 +29,9 @@ MainWindow::MainWindow(QWidget *parent) :
     plotSMS500->setxLabel(tr("Wavelength (nm)"));
     plotSMS500->setyLabel(tr("Amplitude (uW/nm)"));
 
+    plotLSqNonLin->setxLabel(tr("Wavelength"));
+    plotLSqNonLin->setyLabel(tr("Irradiance (W/cm^2 nm)"));
+
     statusLabel  = new QLabel;
     statusBar()->addPermanentWidget( statusLabel );
 
@@ -55,6 +58,9 @@ void MainWindow::resizeEvent(QResizeEvent *)
 
     ui->plotStarSimulator->resize(this->width() - 590, this->width() - 590);
     plotLSqNonLin->resize(ui->plotStarSimulator->width(), ui->plotStarSimulator->height());
+
+    plotLSqNonLin->setxLabel(tr("Wavelength"));
+    plotLSqNonLin->setyLabel(tr("Irradiance"));
 
     if (ui->plotArea->width() > 700) {
         ui->plotAreaLongTermStability->resize(this->width() - 520, this->height() - 190);
@@ -83,6 +89,9 @@ void MainWindow::resizeEvent(QResizeEvent *)
             ui->stopLongTermStabilityLabel->hide();
             ui->stopLongTermStabilityLabel_2->show();
         }
+
+        plotLSqNonLin->setxLabel(tr("Wavelength (nm)"));
+        plotLSqNonLin->setyLabel(tr("Irradiance (W/cm^2 nm)"));
     } else {
         ui->plotAreaLed->resize(5, 457);
         plotLedDriver->resize( ui->plotAreaLed->width(), ui->plotAreaLed->height());
@@ -689,7 +698,7 @@ void MainWindow::ledModelingInfo(QString message)
     ui->scanInfo->setText(message);
 }
 
-void MainWindow::lsqNonLInStartStop()
+void MainWindow::lsqNonLinStartStop()
 {
     if (ui->btnStartStopStarSimulator->text().contains("Start Simulator")) {
         lsqNonLinStart();
@@ -713,8 +722,8 @@ void MainWindow::lsqNonLinStart()
         sms500->wait();
     }
 
-    ui->rbtnFlux->setChecked(true);           // Set SMS500 Operation Mode to Flux
-    ui->numberOfScansLineEdit->setText("1");  // Set SMS500 Parameters
+    ui->rbtnFlux->setChecked(true);          // Set SMS500 Operation Mode to Flux
+    ui->numberOfScansLineEdit->setText("1"); // Set SMS500 Parameters
     ui->AutoRangeCheckBox->setChecked(true);
     ui->samplesToAverageSpinBox->setValue(5);
     ui->smoothingSpinBox->setValue(1);
@@ -744,6 +753,18 @@ void MainWindow::lsqNonLinStart()
         lsqnonlin->setx0Type(LSqNonLin::x0UserDefined, lsqNonLinx0());
     } else {
         // Genetic Algorithm here!
+    }
+
+    // Transference Function of Pinhole and Colimator
+    if (starLoadTransferenceFunction() == false) {
+        if (!QMessageBox::question(this, tr("Star transference function file not found!"),
+                                  tr("For the correct generation of the star spectrum, "
+                                     "load the transference function file."),
+                                  tr("Load"), tr("Cancel") )) {
+            if (starUpdateTransferenceFunction() == true) {
+                starLoadTransferenceFunction();
+            }
+        }
     }
 
     lsqnonlin->start();
@@ -913,15 +934,19 @@ void MainWindow::lsqNonLinObjectiveFunction()
     double *masterData;
     QVector< QVector<double> > starData;
 
-    masterData  = sms500->masterData();
-    starData    = lsqNonLinStar->spectralData();
+    masterData = sms500->masterData();
+    starData   = lsqNonLinStar->spectralData();
 
     for (int i = 0; i < sms500->points(); i++) {
         if (masterData[i] < 0) {
             f(i) = starData[i][1];
         } else {
-            f(i) = starData[i][1] - masterData[i];
+            f(i) = starData[i][1] - (masterData[i] * transferenceFunction[i]);
         }
+
+        // Due to very small values ​​of the objective function was necessary to add this multiplier
+        // 1e17 has been defined empirically
+        f(i) *= 1e17;
     }
 
     lsqnonlin->setObjectiveFunction( f );
@@ -1089,6 +1114,66 @@ void MainWindow::lsqNonLinLog(QString info)
     ui->starSimulatorLog->appendPlainText(info);
 }
 
+bool MainWindow::starLoadTransferenceFunction()
+{
+    transferenceFunction.resize(641);
+
+    // Opens input data in txt file
+    QString filePath = QDir::currentPath() + "/transferenceFunction.txt";
+    QFile file(filePath);
+    if (!file.exists()) {
+        for (int i = 0; i < 641; i++) {
+            transferenceFunction[i] = 1;
+        }
+        return false;
+    }
+    file.open(QIODevice::ReadOnly);
+    QTextStream in(&file);
+    QString line;
+    QStringList fields;
+
+    in.seek(0); // Reposition to beginning of file
+
+    for (int i = 0; i < 641; i++) {
+        line   = in.readLine();
+        fields = line.split("\t");
+        // The values of SMS500 are in uW. 1 uW = 1 x 10 ^ -6 W
+        transferenceFunction[i] = fields.at(1).toDouble() * 1e-6;
+    }
+    file.close();
+
+    return true;
+}
+
+bool MainWindow::starUpdateTransferenceFunction()
+{
+    QString filePath = QFileDialog::getOpenFileName(this);
+
+    if (filePath.isEmpty()) {
+        return false;
+    }
+
+    QFile inFile(filePath);
+    inFile.open(QIODevice::ReadOnly);
+    QTextStream in(&inFile);
+
+    // Saves output data
+    QString outFilePath = QDir::currentPath() + "/transferenceFunction.txt";
+    QFile outFile(outFilePath);
+    if (!outFile.open(QIODevice::WriteOnly)) {
+        statusBar()->showMessage(tr("Transference function: an error occurred while loading file."));
+        return false;
+    }
+    QTextStream out(&outFile);
+    out << in.readAll();
+
+    outFile.close();
+    inFile.close();
+
+    statusBar()->showMessage(tr("Transference function successfully loaded"));
+    return true;
+}
+
 MatrixXi MainWindow::lsqNonLinx0()
 {
     MatrixXi matrix(72, 1);
@@ -1172,10 +1257,10 @@ MatrixXi MainWindow::lsqNonLinx0()
 void MainWindow::longTermStabilityCreateDB()
 {
     QString filePath = QFileDialog::getSaveFileName(
-                this,
-                tr("Long Term Stability :: Create Database"),
-                QDir::homePath(),
-                tr("Star Simulator DB *.db"));
+                           this,
+                           tr("Long Term Stability :: Create Database"),
+                           QDir::homePath(),
+                           tr("Star Simulator DB *.db"));
 
     if (filePath.isEmpty()) {
         return;
@@ -1210,10 +1295,10 @@ void MainWindow::longTermStabilityCreateDB()
 void MainWindow::longTermStabilityOpenDB()
 {
     QString filePath = QFileDialog::getOpenFileName(
-                this,
-                tr("Long Term Stability :: Open Database"),
-                QDir::currentPath(),
-                tr("Star Simulator Database (*.db);;All files (*.*)"));
+                           this,
+                           tr("Long Term Stability :: Open Database"),
+                           QDir::currentPath(),
+                           tr("Star Simulator Database (*.db);;All files (*.*)"));
 
     if (filePath.isNull()) {
         return;
@@ -1354,11 +1439,11 @@ void MainWindow::longTermStabilityStart()
                 ui->startWaveLineEdit->text().toInt(),
                 ui->stopWaveLineEdit->text().toInt(),
                 INTEGRATION_TIME[ui->integrationTimeComboBox->currentIndex()],
-                ui->samplesToAverageSpinBox->value(),
-                ui->smoothingSpinBox->value(),
-                noiseReduction,
-                ui->dynamicDarkCheckBox->isChecked(),
-                channelValues);
+            ui->samplesToAverageSpinBox->value(),
+            ui->smoothingSpinBox->value(),
+            noiseReduction,
+            ui->dynamicDarkCheckBox->isChecked(),
+            channelValues);
 
     longTermStabilityAlarmClock->setAlarmClock(hour, min, sec, secTimeInterval);
     longTermStabilityAlarmClock->start();
@@ -1624,8 +1709,13 @@ void MainWindow::plotScanResult(QPolygonF points, int peakWavelength, double amp
     plotLedDriver->showData(points, amplitude);
 
     if (lsqnonlin->isRunning()) {
+        QPolygonF newPoints;
+        for (int i = 0; i < points.size(); i++) {
+            newPoints << QPointF(points.at(i).x(), points.at(i).y() * transferenceFunction[i]);
+        }
+
         plotLSqNonLin->showPeak(peakWavelength, amplitude);
-        plotLSqNonLin->showData(points, lsqNonLinStar->peak() * 1.2);
+        plotLSqNonLin->showData(newPoints, lsqNonLinStar->peak() * 1.2);
     }
 
     if (ui->AutoRangeCheckBox->isChecked()) {
@@ -1780,7 +1870,7 @@ void MainWindow::uiInputValidator()
             new QRegExpValidator(QRegExp("^([1-9][0-9]{0,3})$"), this);
     ui->longTermStabilityTimeInterval->setValidator(timeInterval);
 
-    QValidator *magnitudeValidator = new QRegExpValidator(QRegExp("^-[1-9]|[0-9]$"), this);
+    QValidator *magnitudeValidator = new QRegExpValidator(QRegExp("^-[1-9][.][0-9]|-0[.][1-9]|[0-9][.][0-9]|-[1-9]|[0-9]$"), this);
     ui->starMagnitude->setValidator(magnitudeValidator);
 
     QValidator *temperatureValidator = new QRegExpValidator(QRegExp("^[1-9][0-9]{0,5}$"), this);
@@ -2089,6 +2179,8 @@ void MainWindow::ledDriverSignalAndSlot()
 
 void MainWindow::lsqNonLinSignalAndSlot()
 {
+    connect(ui->actionLoadTransferenceFunction, SIGNAL(triggered(bool)), this, SLOT(starUpdateTransferenceFunction()));
+
     connect(lsqnonlin, SIGNAL(ledDataNotFound()), this, SLOT(lsqNonLinLoadLedData()));
     connect(lsqnonlin, SIGNAL(info(QString)),     this, SLOT(lsqNonLinLog(QString)));
     connect(lsqnonlin, SIGNAL(performScan()),     this, SLOT(lsqNonLinPerformScan()));
@@ -2098,7 +2190,7 @@ void MainWindow::lsqNonLinSignalAndSlot()
     connect(ui->starMagnitude, SIGNAL(editingFinished()), this, SLOT(lsqNonLinStarSettings()));
     connect(ui->starTemperature, SIGNAL(editingFinished()), this, SLOT(lsqNonLinStarSettings()));
 
-    connect(ui->btnStartStopStarSimulator, SIGNAL(clicked()), this, SLOT(lsqNonLInStartStop()));
+    connect(ui->btnStartStopStarSimulator, SIGNAL(clicked()), this, SLOT(lsqNonLinStartStop()));
 
     connect(ui->x0Random, SIGNAL(toggled(bool)), this, SLOT(lsqNonLinx0Handle()));
     connect(ui->x0UserDefined, SIGNAL(toggled(bool)), this, SLOT(lsqNonLinx0Handle()));
@@ -2118,3 +2210,4 @@ void MainWindow::longTermStabilitySignalAndSlot()
     connect(ui->btnExportAllLongTermStability, SIGNAL(clicked()), this, SLOT(longTermStabilityExportAll()));
     connect(ui->tableView, SIGNAL(clicked(QModelIndex)), this, SLOT(longTermStabilityHandleTableSelection()));
 }
+
