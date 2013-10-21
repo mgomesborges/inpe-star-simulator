@@ -8,15 +8,15 @@ LSqNonLin::LSqNonLin(QObject *parent) :
     objectiveFunction.resize(641,1);
     minimumDigitalLevelByChannel.resize(1,72);
 
-    initialized       = false;
-    stopThread        = false;
-    enabledToContinue = false;
+    initialized           = false;
+    stopThread            = false;
+    initialSolutionLoaded = false;
+    enabledToContinue     = false;
+    x0Type                = x0Random;
 
     // Create seed for the random
     QTime time = QTime::currentTime();
     qsrand((uint)time.msec());
-
-    resetToDefault();
 }
 
 LSqNonLin::~LSqNonLin()
@@ -85,141 +85,237 @@ bool LSqNonLin::loadDerivates()
     return true;
 }
 
+void LSqNonLin::setAlgorithm(int algorithm)
+{
+    chosenAlgorithm = algorithm;
+}
+
 void LSqNonLin::setx0Type(int x0SearchType, MatrixXi x)
 {
     x0Type = x0SearchType;
     x0     = x;
+
+    if (x0SearchType == x0UserDefined){
+        initialSolutionLoaded = false;
+    }
 }
 
 void LSqNonLin::run()
 {
     stopThread = false;
 
-    if (loadDerivates() == true) {
-        initialized = true;
-    } else {
-        resetToDefault();
-        emit finished();
-        return;
+    if (chosenAlgorithm == leastSquareNonLinear) {
+        if (loadDerivates() == true) {
+            initialized = true;
+        } else {
+            emit finished();
+            return;
+        }
     }
 
     int stopCriteria;
     double alpha;
     double fxCurrent;
-    double fxPrevious;
     double fxBest;
     MatrixXd I;
     MatrixXd temp;
     MatrixXd deltaND;
     MatrixXi xCurrent(72,1);
-    MatrixXi xPrevious(72,1);
     MatrixXi xBest(72,1);
 
     // Initial Solution
-    if (x0Type == x0Random) {
-        for (int row = 0; row < xCurrent.rows(); row++) {
-            xCurrent(row) = randomInt(0, 4095);
+    if (initialSolutionLoaded == true) {
+        xCurrent = solution;
+    } else {
+        if (x0Type == x0Random) {
+            for (int row = 0; row < xCurrent.rows(); row++) {
+                xCurrent(row) = randomInt(0, 4095);
+            }
+        } else if (x0Type == x0UserDefined) {
+            xCurrent = x0;
+        } else { // x0GeneticAlgorithmSearch
+            // Genetic Algorithm here!
         }
-    } else if (x0Type == x0UserDefined) {
-        xCurrent = x0;
-    } else { // x0GeneticAlgorithmSearch
 
-        // Genetic Algorithm here!
-
+        initialSolutionLoaded = true;
     }
 
-    // Impose a bound constraint for minimum value
-    for (int row = 0; row < xCurrent.rows(); row++) {
-        if (xCurrent(row) < minimumDigitalLevelByChannel(row)){
-            xCurrent(row) = minimumDigitalLevelByChannel(row);
-        }
-    }
+    getObjectiveFunction(xCurrent);
 
     alpha        = 6.5;  // Empirical value
     fxBest       = 1e15; // Big number
     stopCriteria = 0;
 
-    for (int i = 0; i < 1000; i++) {
-        getObjectiveFunction(xCurrent);
-        jacobian(xCurrent);
-
-        // Diagonal Matrix :: I = diag(diag((J'*J)));
-        I    = jacobianMatrix.transpose() * jacobianMatrix;
-        temp = I.diagonal();
-        I    = temp.asDiagonal();
-
-        // Levenberg Marquardt
-        // deltaND = inv(J'*J + alpha * I) * J' * objectiveFunction;
-        temp = (jacobianMatrix.transpose() * jacobianMatrix + alpha * I);
-        deltaND = temp.inverse() * jacobianMatrix.transpose() * objectiveFunction;
-
-        // Stores the value of xCurrent
-        xPrevious  = xCurrent;
-
-        // xCurrent  = xCurrent + deltaND
+    if (chosenAlgorithm == leastSquareNonLinear) {
+        // Impose a bound constraint for minimum value
         for (int row = 0; row < xCurrent.rows(); row++) {
-            xCurrent(row) = xCurrent(row) + round(deltaND(row));
-
-            // Impose a bound constraint for maximum value
-            if (xCurrent(row) > 4095) {
-                xCurrent(row) = 4095;
-            }
-
-            // Impose a bound constraint for minimum value
             if (xCurrent(row) < minimumDigitalLevelByChannel(row)){
                 xCurrent(row) = minimumDigitalLevelByChannel(row);
             }
         }
 
-        // fxPrevious = sqrt( sum(objectiveFunction^2) );
-        temp       = objectiveFunction.array().pow(2);
-        fxPrevious = sqrt( temp.sum() );
+        for (int i = 0; i < 1000; i++) {
+            // getObjectiveFunction(xCurrent);
+            jacobian(xCurrent);
 
-        // Best solution
-        if (fxPrevious < fxBest) {
-            xBest  = xPrevious;
-            fxBest = fxPrevious;
-        }
+            // Diagonal Matrix :: I = diag(diag((J'*J)));
+            I    = jacobianMatrix.transpose() * jacobianMatrix;
+            temp = I.diagonal();
+            I    = temp.asDiagonal();
 
-        msleep(1); // wait 1ms for continue, see Qt Thread's Documentation
-        if (stopThread == true) {
-            break;
-        }
+            // Levenberg Marquardt
+            // deltaND = inv(J'*J + alpha * I) * J' * objectiveFunction;
+            temp = (jacobianMatrix.transpose() * jacobianMatrix + alpha * I);
+            deltaND = temp.inverse() * jacobianMatrix.transpose() * objectiveFunction;
 
-        // fxCurrent = sqrt( sum(objectiveFunction^2) );
-        getObjectiveFunction(xCurrent); // Get fxCurrent with new xCurrent value
-        temp       = objectiveFunction.array().pow(2);
-        fxCurrent  = sqrt( temp.sum() );
+            // xCurrent  = xCurrent - deltaND
+            for (int row = 0; row < xCurrent.rows(); row++) {
+                xCurrent(row) = round(xCurrent(row) - deltaND(row));
 
-        // Stop Criteria
-        if (fxCurrent > fxBest) {
-            stopCriteria++;
+                // Impose a bound constraint for maximum value
+                if (xCurrent(row) > 4095) {
+                    xCurrent(row) = 4095;
+                }
 
-            if (stopCriteria == 20) {
-                getObjectiveFunction(xBest); // Update solution available in getSolution() method
-                emit info(tr("\n\nLeast Square Finished by Stop Criteria: f(x) = %1").arg(fxBest));
+                // Impose a bound constraint for minimum value
+                if (xCurrent(row) < minimumDigitalLevelByChannel(row)){
+                    xCurrent(row) = minimumDigitalLevelByChannel(row);
+                }
+            }
+
+            msleep(1); // wait 1ms for continue, see Qt Thread's Documentation
+            if (stopThread == true) {
+                getObjectiveFunction(xBest); // Return best solution
                 break;
             }
-        } else {
-            stopCriteria = 0;
-        }
 
-        emit info(tr("Iteration: %1\tf(x): %2\tf(x)_best: %3\tDamping factor: %4").arg(i).arg(fxCurrent).arg(fxBest).arg(alpha));
+            // fxCurrent = sqrt( sum(objectiveFunction^2) );
+            getObjectiveFunction(xCurrent); // Get fxCurrent with new xCurrent value
+            temp       = objectiveFunction.array().pow(2);
+            fxCurrent  = sqrt( temp.sum() );
+
+            // Stop Criteria
+            if (fxCurrent > fxBest) {
+                stopCriteria++;
+
+                if (stopCriteria == 20) {
+                    getObjectiveFunction(xBest); // Update solution available in getSolution() method
+                    emit info(tr("\n\nLeast Square Finished by Stop Criteria: f(x) = %1").arg(fxBest));
+                    break;
+                }
+            } else {
+                stopCriteria = 0;
+                xBest        = xCurrent;
+                fxBest       = fxCurrent;
+            }
+
+            emit info(tr("Iteration: %1\tf(x): %2\tf(x)_best: %3\tDamping factor: %4").arg(i).arg(fxCurrent).arg(fxBest).arg(alpha));
+        }
+    } else if (chosenAlgorithm == gradientDescent) {
+        MatrixXi xWithDelta(72,1);
+        double fxPrevious;
+        int delta = 50;
+        alpha     = 0.05;  // Empirical value
+
+        for (int i = 0; i < 1000; i++) {
+            for (int channel = 25; channel <= 96; channel++) {
+                // getObjectiveFunction(xCurrent);
+
+                // fxPrevious = sqrt( sum(objectiveFunction^2) );
+                temp       = objectiveFunction.array().pow(2);
+                fxPrevious = temp.sum();
+
+                // xCurrent with delta
+                xWithDelta = xCurrent;
+
+                // Prevents conversion problems
+                if ((xWithDelta(channel - 25) + delta) > 4095) {
+                    delta = -delta;
+                } else {
+                    delta = abs(delta);
+                }
+
+                xWithDelta(channel - 25) = xWithDelta(channel - 25) + delta;
+
+                // Impose a bounds constraints
+                for (int row = 0; row < xWithDelta.rows(); row++) {
+                    // Impose a bound constraint for maximum value
+                    if (xWithDelta(row) > 4095) {
+                        xWithDelta(row) = 4095;
+                    }
+
+                    // Impose a bound constraint for minimum value
+                    if (xWithDelta(row) < 0){
+                        xWithDelta(row) = 0;
+                    }
+                }
+
+                getObjectiveFunction(xWithDelta);
+
+                // fxCurrent = sqrt( sum(objectiveFunction^2) );
+                temp       = objectiveFunction.array().pow(2);
+                fxCurrent  = temp.sum();
+
+                // Calculates new value for xCurrent
+                xCurrent(channel - 25) = round(xCurrent(channel - 25) - alpha * (fxCurrent - fxPrevious) / delta);
+
+                // Impose a bounds constraints
+                for (int row = 0; row < xCurrent.rows(); row++) {
+                    // Impose a bound constraint for maximum value
+                    if (xCurrent(row) > 4095) {
+                        xCurrent(row) = 4095;
+                    }
+
+                    // Impose a bound constraint for minimum value
+                    if (xCurrent(row) < 0){
+                        xCurrent(row) = 0;
+                    }
+                }
+
+                msleep(1); // wait 1ms for continue, see Qt Thread's Documentation
+                if (stopThread == true) {
+                    break;
+                }
+
+                getObjectiveFunction(xCurrent); // Get objectiveFunction with new xCurrent value
+            }
+
+            // fxCurrent = sqrt( sum(objectiveFunction^2) );
+            temp      = objectiveFunction.array().pow(2);
+            fxCurrent = sqrt(temp.sum());
+
+            // Stop Criteria
+            if (fxCurrent > fxBest) {
+                stopCriteria++;
+
+                if (stopCriteria == 10) {
+                    getObjectiveFunction(xBest); // Update solution available in getSolution() method
+                    emit info(tr("\n\nLeast Square Finished by Stop Criteria: f(x) = %1").arg(fxBest));
+                    break;
+                }
+            } else {
+                stopCriteria = 0;
+                xBest        = xCurrent;
+                fxBest       = fxCurrent;
+            }
+
+            emit info(tr("Iteration: %1\tf(x): %2\tf(x)_best: %3\tDamping factor: %4").arg(i).arg(fxCurrent).arg(fxBest).arg(alpha));
+
+            if (stopThread == true) {
+                getObjectiveFunction(xBest); // Return best solution
+                break;
+            }
+        }
     }
 
     emit finished();
-}
-
-void LSqNonLin::resetToDefault()
-{
-    x0Type = x0Random;
 }
 
 void LSqNonLin::jacobian(const MatrixXi &x)
 {
     int column;
     for (int channel = 25; channel <= 96; channel++) {
-        column = 4095 - x(channel - 25) + 1;
+        column = 4095 - x(channel - 25) + 1; // First column contains the wavelength
         jacobianMatrix.col(channel - 25) = derivatives3DMatrix(channel - 25).col(column);
     }
 }

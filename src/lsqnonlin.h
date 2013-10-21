@@ -18,10 +18,13 @@ public:
     {
         x0Random = 0,
         x0UserDefined,
-        x0GeneticAlgorithmSearch,
-        dampingFactorTechnique1,
-        dampingFactorTechnique2,
-        dampingFactorFixed
+        x0GeneticAlgorithmSearch
+    };
+
+    enum algorithm
+    {
+        leastSquareNonLinear = 0,
+        gradientDescent
     };
 
     explicit LSqNonLin(QObject *parent = 0);
@@ -30,6 +33,7 @@ public:
 
     int randomInt(int low, int high);
     bool loadDerivates();
+    void setAlgorithm(int algorithm);
     void setx0Type(int x0SearchType, MatrixXi x = MatrixXi());
 
 signals:
@@ -47,8 +51,10 @@ public slots:
 
 private:
     bool initialized;
+    bool initialSolutionLoaded;
     bool enabledToContinue;
     bool stopThread;
+    int chosenAlgorithm;
     int x0Type;
     MatrixXi x0;
     MatrixXi solution;
@@ -58,7 +64,6 @@ private:
     Matrix< MatrixXd, 1, 72> derivatives3DMatrix;
 
     void run();
-    void resetToDefault();
 };
 
 #endif // LSQNONLIN_H

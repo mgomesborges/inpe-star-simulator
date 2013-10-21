@@ -284,8 +284,8 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>214</width>
-               <height>396</height>
+               <width>196</width>
+               <height>386</height>
               </rect>
              </property>
              <attribute name="label">
@@ -3983,7 +3983,7 @@ p, li { white-space: pre-wrap; }
            <item row="1" column="0">
             <widget class="QRadioButton" name="gradientDescent">
              <property name="enabled">
-              <bool>false</bool>
+              <bool>true</bool>
              </property>
              <property name="text">
               <string>Gradient Descent</string>

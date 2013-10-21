@@ -30,7 +30,7 @@ MainWindow::MainWindow(QWidget *parent) :
     plotSMS500->setyLabel(tr("Amplitude (uW/nm)"));
 
     plotLSqNonLin->setxLabel(tr("Wavelength"));
-    plotLSqNonLin->setyLabel(tr("Irradiance (W/cm^2 nm)"));
+    plotLSqNonLin->setyLabel(tr("Irradiance (uW/cm^2 nm)"));
 
     statusLabel  = new QLabel;
     statusBar()->addPermanentWidget( statusLabel );
@@ -91,7 +91,7 @@ void MainWindow::resizeEvent(QResizeEvent *)
         }
 
         plotLSqNonLin->setxLabel(tr("Wavelength (nm)"));
-        plotLSqNonLin->setyLabel(tr("Irradiance (W/cm^2 nm)"));
+        plotLSqNonLin->setyLabel(tr("Irradiance (uW/cm^2 nm)"));
     } else {
         ui->plotAreaLed->resize(5, 457);
         plotLedDriver->resize( ui->plotAreaLed->width(), ui->plotAreaLed->height());
@@ -742,6 +742,7 @@ void MainWindow::lsqNonLinStart()
     ui->btnStartStopStarSimulator->setText("Stop Simulator ");
     ui->btnSaveStarSimulatorData->setEnabled(false);
     ui->starSettingsGroupBox->setEnabled(false);
+    ui->fitingAlgorithm->setEnabled(false);
     ui->x0GroupBox->setEnabled(false);
     ui->ledDriverTab->setEnabled(false);
     ui->longTermStabilityTab->setEnabled(false);
@@ -767,6 +768,12 @@ void MainWindow::lsqNonLinStart()
         }
     }
 
+    if (ui->levenbergMarquardt->isChecked()) {
+        lsqnonlin->setAlgorithm(LSqNonLin::leastSquareNonLinear);
+    } else {
+        lsqnonlin->setAlgorithm(LSqNonLin::gradientDescent);
+    }
+
     lsqnonlin->start();
     lsqNonLinTime.start();
 
@@ -787,6 +794,7 @@ void MainWindow::lsqNonLinFinished()
     ui->btnStartStopStarSimulator->setText("Start Simulator");
     ui->btnSaveStarSimulatorData->setEnabled(true);
     ui->starSettingsGroupBox->setEnabled(true);
+    ui->fitingAlgorithm->setEnabled(true);
     ui->x0GroupBox->setEnabled(true);
     ui->ledDriverTab->setEnabled(true);
     ui->longTermStabilityTab->setEnabled(true);
@@ -851,8 +859,6 @@ void MainWindow::lsqNonLinPerformScan()
         }
     }
 
-    sms500->start();
-
     // GUI Updates
     ui->dac04channel25->setText(QString::number(level(0)));
     ui->dac04channel26->setText(QString::number(level(1)));
@@ -901,31 +907,33 @@ void MainWindow::lsqNonLinPerformScan()
     ui->dac09channel69->setText(QString::number(level(44)));
     ui->dac09channel70->setText(QString::number(level(45)));
     ui->dac09channel71->setText(QString::number(level(46)));
-    ui->dac09channel72->setText(QString::number(level(46)));
-    ui->dac10channel73->setText(QString::number(level(47)));
-    ui->dac10channel74->setText(QString::number(level(48)));
-    ui->dac10channel75->setText(QString::number(level(59)));
-    ui->dac10channel76->setText(QString::number(level(50)));
-    ui->dac10channel77->setText(QString::number(level(51)));
-    ui->dac10channel78->setText(QString::number(level(52)));
-    ui->dac10channel79->setText(QString::number(level(53)));
-    ui->dac10channel80->setText(QString::number(level(54)));
-    ui->dac11channel81->setText(QString::number(level(55)));
-    ui->dac11channel82->setText(QString::number(level(56)));
-    ui->dac11channel83->setText(QString::number(level(57)));
-    ui->dac11channel84->setText(QString::number(level(58)));
-    ui->dac11channel85->setText(QString::number(level(59)));
-    ui->dac11channel86->setText(QString::number(level(60)));
-    ui->dac11channel87->setText(QString::number(level(61)));
-    ui->dac11channel88->setText(QString::number(level(62)));
-    ui->dac12channel89->setText(QString::number(level(63)));
-    ui->dac12channel90->setText(QString::number(level(64)));
-    ui->dac12channel91->setText(QString::number(level(65)));
-    ui->dac12channel92->setText(QString::number(level(66)));
-    ui->dac12channel93->setText(QString::number(level(67)));
-    ui->dac12channel94->setText(QString::number(level(68)));
-    ui->dac12channel95->setText(QString::number(level(69)));
-    ui->dac12channel96->setText(QString::number(level(70)));
+    ui->dac09channel72->setText(QString::number(level(47)));
+    ui->dac10channel73->setText(QString::number(level(48)));
+    ui->dac10channel74->setText(QString::number(level(49)));
+    ui->dac10channel75->setText(QString::number(level(50)));
+    ui->dac10channel76->setText(QString::number(level(51)));
+    ui->dac10channel77->setText(QString::number(level(52)));
+    ui->dac10channel78->setText(QString::number(level(53)));
+    ui->dac10channel79->setText(QString::number(level(54)));
+    ui->dac10channel80->setText(QString::number(level(55)));
+    ui->dac11channel81->setText(QString::number(level(56)));
+    ui->dac11channel82->setText(QString::number(level(57)));
+    ui->dac11channel83->setText(QString::number(level(58)));
+    ui->dac11channel84->setText(QString::number(level(59)));
+    ui->dac11channel85->setText(QString::number(level(60)));
+    ui->dac11channel86->setText(QString::number(level(61)));
+    ui->dac11channel87->setText(QString::number(level(62)));
+    ui->dac11channel88->setText(QString::number(level(63)));
+    ui->dac12channel89->setText(QString::number(level(64)));
+    ui->dac12channel90->setText(QString::number(level(65)));
+    ui->dac12channel91->setText(QString::number(level(66)));
+    ui->dac12channel92->setText(QString::number(level(67)));
+    ui->dac12channel93->setText(QString::number(level(68)));
+    ui->dac12channel94->setText(QString::number(level(69)));
+    ui->dac12channel95->setText(QString::number(level(70)));
+    ui->dac12channel96->setText(QString::number(level(71)));
+
+    sms500->start();
 }
 
 void MainWindow::lsqNonLinObjectiveFunction()
@@ -933,20 +941,24 @@ void MainWindow::lsqNonLinObjectiveFunction()
     MatrixXd f(641, 1);
     double *masterData;
     QVector< QVector<double> > starData;
+    double convergenceFactor;
 
     masterData = sms500->masterData();
     starData   = lsqNonLinStar->spectralData();
 
+    // Due to very small values ​​of the objective function was necessary to add this multiplier
+    convergenceFactor = 1e11;
+
+    statusBar()->showMessage(tr("%1").arg(convergenceFactor));
+
     for (int i = 0; i < sms500->points(); i++) {
         if (masterData[i] < 0) {
-            f(i) = starData[i][1];
+            f(i) = - starData[i][1];
         } else {
-            f(i) = starData[i][1] - (masterData[i] * transferenceFunction[i]);
+            f(i) = (masterData[i] * transferenceFunction[i]) - (starData[i][1]);
         }
 
-        // Due to very small values ​​of the objective function was necessary to add this multiplier
-        // 1e17 has been defined empirically
-        f(i) *= 1e17;
+        f(i) *= convergenceFactor;
     }
 
     lsqnonlin->setObjectiveFunction( f );
@@ -1137,8 +1149,7 @@ bool MainWindow::starLoadTransferenceFunction()
     for (int i = 0; i < 641; i++) {
         line   = in.readLine();
         fields = line.split("\t");
-        // The values of SMS500 are in uW. 1 uW = 1 x 10 ^ -6 W
-        transferenceFunction[i] = fields.at(1).toDouble() * 1e-6;
+        transferenceFunction[i] = fields.at(1).toDouble();
     }
     file.close();
 

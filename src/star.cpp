@@ -62,7 +62,7 @@ QVector<QVector<double> > Star::spectralData()
         // Blackbody in W m^-2 m^-1
         starData[i][1] = (2 * M_PI * h * pow(c,2)) / (pow(WL[i],5) * (exp((h * c) / (k * WL[i] * starTemperature)) - 1));
 
-        // Converts (m^-2 m^-1) to (cm^-2 nm^-1)
+        // Converts (W m^-2 m^-1) to (W cm^-2 nm^-1)
         starData[i][1] = starData[i][1] / 1e13;
     }
 
@@ -76,9 +76,10 @@ QVector<QVector<double> > Star::spectralData()
     // Resets star peak
     starPeak = 0;
 
-    // Spectral Irradiance of a model Star (W cm^-2 nm^-1)
+    // Spectral Irradiance of a model Star (uW cm^-2 nm^-1)
     for (int i = 0; i < 641; i++) {
-        starData[i][1] = starData[i][1] * conversionFactor550;
+        // Converts W in uW: 1W = 1 x 10^6 uW
+        starData[i][1] = starData[i][1] * conversionFactor550 * 1e6;
 
         // Get star's peak value
         if (starData[i][1] > starPeak) {
