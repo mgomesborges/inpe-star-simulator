@@ -2,7 +2,7 @@
 #define LONGTERMSTABILITY_H
 
 #include <QThread>
-#include <QStringList>
+#include <QVector>
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QTextStream>
@@ -38,7 +38,7 @@ public:
             int boxcarSmoothing,
             int noiseReduction,
             bool dynamicDark,
-            QStringList channelValue);
+            const QVector<int> &channelValue);
 
     bool saveScanData(int id,
             int scanNumber,

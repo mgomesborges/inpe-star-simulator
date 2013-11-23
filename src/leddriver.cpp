@@ -4,6 +4,7 @@ LedDriver::LedDriver(QObject *parent) :
     QThread(parent)
 {
     connected = false;
+    v2ref     = true;
 }
 
 LedDriver::~LedDriver()
@@ -21,24 +22,10 @@ bool LedDriver::openConnection()
     if (FT_Open(0, &ftHandle) == FT_OK) {
 
         FT_SetTimeouts(ftHandle, 1000, 1000);
-
-        // Set 2Vref
-        char txBuffer[10];
-        for (int dac = 0; dac < 12; dac++) {
-            txBuffer[0] = 0x0C;
-            txBuffer[1] = 0x40;
-            txBuffer[2] = 0x83;
-            txBuffer[3] = 0x0D;
-            txBuffer[4] = 0x40;
-            txBuffer[5] = 0x88;
-            txBuffer[6] =  dac;
-            txBuffer[7] = 0x40;
-            txBuffer[8] = 0x80;
-            txBuffer[9] = '\0';
-
-            writeData(txBuffer);
-
+        if (configureVoltageRef() == true) {
             connected = true;
+        } else {
+            connected = false;
         }
     } else {
         connected = false;
@@ -111,14 +98,14 @@ bool LedDriver::resetDACs()
     char txBuffer[10];
 
     // RESET DAC0 to DAC11
-    for (int i = 0; i < 12; i++) {
+    for (int dac = 0; dac < 12; dac++) {
         txBuffer[0] = 0x0C;
         txBuffer[1] = 0x40;
         txBuffer[2] = 0x80;
         txBuffer[3] = 0x0D;
         txBuffer[4] = 0x40;
         txBuffer[5] = 0x8F;
-        txBuffer[6] =    i;
+        txBuffer[6] =  dac;
         txBuffer[7] = 0x40;
         txBuffer[8] = 0x80;
         txBuffer[9] = '\0';
@@ -128,11 +115,27 @@ bool LedDriver::resetDACs()
         }
     }
 
-    // Set 2Vref
+    if (configureVoltageRef() == false) {
+        return false;
+    }
+
+    return true;
+}
+
+bool LedDriver::configureVoltageRef()
+{
+    int vref;
+    if (v2ref == true) {
+        vref = 0x83;
+    } else {
+        vref = 0x80;
+    }
+
+    char txBuffer[10];
     for (int dac = 0; dac < 12; dac++) {
         txBuffer[0] = 0x0C;
         txBuffer[1] = 0x40;
-        txBuffer[2] = 0x83;
+        txBuffer[2] = vref;
         txBuffer[3] = 0x0D;
         txBuffer[4] = 0x40;
         txBuffer[5] = 0x88;
@@ -144,6 +147,17 @@ bool LedDriver::resetDACs()
         if (writeData(txBuffer) == false) {
             return false;
         }
+    }
+
+    return true;
+}
+
+bool LedDriver::setV2Ref(bool checked)
+{
+    v2ref = checked;
+
+    if (configureVoltageRef() == false) {
+        return false;
     }
 
     return true;

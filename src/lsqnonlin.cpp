@@ -10,7 +10,6 @@ LSqNonLin::LSqNonLin(QObject *parent) :
 
     initialized           = false;
     stopThread            = false;
-    initialSolutionLoaded = false;
     enabledToContinue     = false;
     x0Type                = x0Random;
 
@@ -94,10 +93,6 @@ void LSqNonLin::setx0Type(int x0SearchType, MatrixXi x)
 {
     x0Type = x0SearchType;
     x0     = x;
-
-    if (x0SearchType == x0UserDefined){
-        initialSolutionLoaded = false;
-    }
 }
 
 void LSqNonLin::run()
@@ -124,20 +119,12 @@ void LSqNonLin::run()
     MatrixXi xBest(72,1);
 
     // Initial Solution
-    if (initialSolutionLoaded == true) {
-        xCurrent = solution;
-    } else {
-        if (x0Type == x0Random) {
-            for (int row = 0; row < xCurrent.rows(); row++) {
-                xCurrent(row) = randomInt(0, 4095);
-            }
-        } else if (x0Type == x0UserDefined) {
-            xCurrent = x0;
-        } else { // x0GeneticAlgorithmSearch
-            // Genetic Algorithm here!
+    if (x0Type == x0Random) {
+        for (int row = 0; row < xCurrent.rows(); row++) {
+            xCurrent(row) = randomInt(0, 4095);
         }
-
-        initialSolutionLoaded = true;
+    } else if ((x0Type == x0UserDefined) || (x0Type == x0Current)) {
+        xCurrent = x0;
     }
 
     getObjectiveFunction(xCurrent);

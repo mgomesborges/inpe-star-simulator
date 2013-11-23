@@ -31,7 +31,7 @@ public:
 
     void showData(QPolygonF points, double amplitude, int curveNumber = 0);
     void showPeak(double, double);
-    void setPlotLimits(double xMin = 300, double xMax = 1100, double yMin = 0, double yMax = 1000);
+    void setPlotLimits(double xMin = 350, double xMax = 1000, double yMin = 0, double yMax = 1000);
     void setxLabel(const QString &label);
     void setyLabel(const QString &label);
 

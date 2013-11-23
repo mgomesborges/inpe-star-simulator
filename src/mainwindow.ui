@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>820</width>
-    <height>620</height>
+    <width>950</width>
+    <height>625</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -18,7 +18,7 @@
   </property>
   <property name="minimumSize">
    <size>
-    <width>820</width>
+    <width>950</width>
     <height>620</height>
    </size>
   </property>
@@ -48,7 +48,7 @@
    <set>QMainWindow::AllowTabbedDocks|QMainWindow::AnimatedDocks</set>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <layout class="QGridLayout" name="gridLayout_13">
+   <layout class="QGridLayout" name="gridLayout_50">
     <item row="0" column="0">
      <widget class="QTabWidget" name="tabWidget">
       <property name="sizePolicy">
@@ -58,7 +58,7 @@
        </sizepolicy>
       </property>
       <property name="currentIndex">
-       <number>2</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="sms500Tab">
        <attribute name="title">
@@ -279,7 +279,7 @@
             <property name="currentIndex">
              <number>0</number>
             </property>
-            <widget class="QWidget" name="page_3">
+            <widget class="QWidget" name="spectrometerParameters">
              <property name="geometry">
               <rect>
                <x>0</x>
@@ -468,6 +468,9 @@
                 </item>
                 <item row="1" column="1">
                  <widget class="QSpinBox" name="smoothingSpinBox">
+                  <property name="minimum">
+                   <number>1</number>
+                  </property>
                   <property name="maximum">
                    <number>50</number>
                   </property>
@@ -476,7 +479,7 @@
                </layout>
               </item>
               <item row="3" column="0">
-               <widget class="QGroupBox" name="groupBox_3">
+               <widget class="QGroupBox" name="sms500WavelengthGroupBox">
                 <property name="title">
                  <string>Wavelength (nm)</string>
                 </property>
@@ -611,7 +614,7 @@
               </item>
              </layout>
             </widget>
-            <widget class="QWidget" name="page_4">
+            <widget class="QWidget" name="modesOfOperation">
              <property name="geometry">
               <rect>
                <x>0</x>
@@ -3657,38 +3660,6 @@ p, li { white-space: pre-wrap; }
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; color:#ff0000;&quot;&gt;                      Satured!&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
        </widget>
-       <widget class="QToolButton" name="btnConnectDisconnectLED">
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>10</y>
-          <width>87</width>
-          <height>55</height>
-         </rect>
-        </property>
-        <property name="minimumSize">
-         <size>
-          <width>70</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="text">
-         <string>Connect</string>
-        </property>
-        <property name="icon">
-         <iconset resource="Pics.qrc">
-          <normaloff>:/pics/reconnect.png</normaloff>:/pics/reconnect.png</iconset>
-        </property>
-        <property name="iconSize">
-         <size>
-          <width>32</width>
-          <height>32</height>
-         </size>
-        </property>
-        <property name="toolButtonStyle">
-         <enum>Qt::ToolButtonTextUnderIcon</enum>
-        </property>
-       </widget>
        <widget class="QLabel" name="scanNumberLabel_2">
         <property name="geometry">
          <rect>
@@ -3721,124 +3692,6 @@ p, li { white-space: pre-wrap; }
          <string/>
         </property>
        </widget>
-       <widget class="QToolButton" name="btnLedModeling">
-        <property name="geometry">
-         <rect>
-          <x>100</x>
-          <y>10</y>
-          <width>87</width>
-          <height>55</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>LED Modeling</string>
-        </property>
-        <property name="icon">
-         <iconset resource="Pics.qrc">
-          <normaloff>:/pics/led.jpg</normaloff>:/pics/led.jpg</iconset>
-        </property>
-        <property name="iconSize">
-         <size>
-          <width>32</width>
-          <height>32</height>
-         </size>
-        </property>
-        <property name="toolButtonStyle">
-         <enum>Qt::ToolButtonTextUnderIcon</enum>
-        </property>
-       </widget>
-       <widget class="QGroupBox" name="ledModelingParametersGoupBox">
-        <property name="geometry">
-         <rect>
-          <x>324</x>
-          <y>3</y>
-          <width>341</width>
-          <height>81</height>
-         </rect>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>350</width>
-          <height>16777215</height>
-         </size>
-        </property>
-        <property name="title">
-         <string>Led Modeling Parameters</string>
-        </property>
-        <layout class="QGridLayout" name="gridLayout_15">
-         <item row="1" column="0">
-          <layout class="QGridLayout" name="gridLayout">
-           <item row="0" column="0">
-            <widget class="QLabel" name="label_8">
-             <property name="text">
-              <string>Start Channel</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QLabel" name="label_7">
-             <property name="text">
-              <string>End Channel</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLineEdit" name="startChannel">
-             <property name="text">
-              <string>25</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="QLineEdit" name="endChannel">
-             <property name="text">
-              <string>96</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="2">
-            <widget class="QComboBox" name="levelIncDecComboBox">
-             <property name="minimumSize">
-              <size>
-               <width>120</width>
-               <height>0</height>
-              </size>
-             </property>
-             <item>
-              <property name="text">
-               <string>Level Decrement</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>Level Increment</string>
-              </property>
-             </item>
-            </widget>
-           </item>
-           <item row="1" column="2">
-            <widget class="QLineEdit" name="levelIncDecValue">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>50</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>1</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-        </layout>
-       </widget>
        <widget class="QLabel" name="scanInfo">
         <property name="geometry">
          <rect>
@@ -3856,35 +3709,386 @@ p, li { white-space: pre-wrap; }
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:14pt; color:#ff0000;&quot;&gt; &lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
        </widget>
+       <widget class="QWidget" name="horizontalLayoutWidget">
+        <property name="geometry">
+         <rect>
+          <x>8</x>
+          <y>10</y>
+          <width>656</width>
+          <height>82</height>
+         </rect>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_48">
+         <item row="0" column="2">
+          <widget class="QGroupBox" name="LEDDriverParametersGroupBox">
+           <property name="minimumSize">
+            <size>
+             <width>110</width>
+             <height>80</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>120</width>
+             <height>80</height>
+            </size>
+           </property>
+           <property name="title">
+            <string>LED Driver VREF</string>
+           </property>
+           <layout class="QGridLayout" name="gridLayout_47">
+            <item row="0" column="0">
+             <widget class="QCheckBox" name="setV2RefCheckBox">
+              <property name="text">
+               <string>Set V2Ref</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QToolButton" name="btnLoadValuesForChannels">
+           <property name="minimumSize">
+            <size>
+             <width>70</width>
+             <height>68</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Load values</string>
+           </property>
+           <property name="icon">
+            <iconset resource="Pics.qrc">
+             <normaloff>:/pics/database_up.png</normaloff>:/pics/database_up.png</iconset>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>32</width>
+             <height>32</height>
+            </size>
+           </property>
+           <property name="toolButtonStyle">
+            <enum>Qt::ToolButtonTextUnderIcon</enum>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QToolButton" name="btnConnectDisconnectLED">
+           <property name="minimumSize">
+            <size>
+             <width>70</width>
+             <height>68</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Connect</string>
+           </property>
+           <property name="icon">
+            <iconset resource="Pics.qrc">
+             <normaloff>:/pics/reconnect.png</normaloff>:/pics/reconnect.png</iconset>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>32</width>
+             <height>32</height>
+            </size>
+           </property>
+           <property name="toolButtonStyle">
+            <enum>Qt::ToolButtonTextUnderIcon</enum>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="4">
+          <widget class="QToolButton" name="btnLedModeling">
+           <property name="minimumSize">
+            <size>
+             <width>70</width>
+             <height>68</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>LED
+Modeling</string>
+           </property>
+           <property name="icon">
+            <iconset resource="Pics.qrc">
+             <normaloff>:/pics/logo.png</normaloff>:/pics/logo.png</iconset>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>32</width>
+             <height>32</height>
+            </size>
+           </property>
+           <property name="toolButtonStyle">
+            <enum>Qt::ToolButtonTextUnderIcon</enum>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="3">
+          <widget class="QGroupBox" name="ledModelingParametersGoupBox">
+           <property name="minimumSize">
+            <size>
+             <width>310</width>
+             <height>80</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>350</width>
+             <height>80</height>
+            </size>
+           </property>
+           <property name="title">
+            <string>Led Modeling Parameters</string>
+           </property>
+           <layout class="QGridLayout" name="gridLayout_15">
+            <item row="0" column="0">
+             <layout class="QGridLayout" name="gridLayout">
+              <item row="0" column="1">
+               <widget class="QLabel" name="label_8">
+                <property name="text">
+                 <string>Start Channel</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="2">
+               <widget class="QLabel" name="label_7">
+                <property name="text">
+                 <string>End Channel</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QLineEdit" name="startChannel">
+                <property name="maximumSize">
+                 <size>
+                  <width>80</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>25</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="2">
+               <widget class="QLineEdit" name="endChannel">
+                <property name="maximumSize">
+                 <size>
+                  <width>80</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>96</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="3">
+               <widget class="QComboBox" name="levelIncDecComboBox">
+                <property name="minimumSize">
+                 <size>
+                  <width>110</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <item>
+                 <property name="text">
+                  <string>Level Decrement</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Level Increment</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item row="1" column="3">
+               <widget class="QLineEdit" name="levelIncDecValue">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>45</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>110</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>1</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
+         </item>
+        </layout>
+       </widget>
       </widget>
       <widget class="QWidget" name="starSimulatorTab">
        <attribute name="title">
         <string>Star Simulator</string>
        </attribute>
-       <layout class="QGridLayout" name="gridLayout_43">
-        <item row="2" column="2" colspan="4">
-         <widget class="QPlainTextEdit" name="starSimulatorLog">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-            <horstretch>1</horstretch>
-            <verstretch>10</verstretch>
-           </sizepolicy>
+       <layout class="QGridLayout" name="gridLayout_13">
+        <item row="0" column="0">
+         <layout class="QGridLayout" name="gridLayout_43">
+          <item row="0" column="1">
+           <widget class="QLabel" name="label_9">
+            <property name="text">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; color:#aa0000;&quot;&gt;Output irradiance:&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="4">
+           <widget class="QLabel" name="label_13">
+            <property name="text">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; color:#00007f;&quot;&gt;Star irradiance:&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QLabel" name="outputIrradianceLabel">
+            <property name="text">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; color:#aa0000;&quot;&gt;------&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="5">
+           <widget class="QLabel" name="starIrradianceLabel">
+            <property name="text">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; color:#00007f;&quot;&gt;------&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <spacer name="horizontalSpacer_5">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>60</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item row="0" column="3">
+           <spacer name="horizontalSpacer_6">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>10</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item row="0" column="6">
+           <spacer name="horizontalSpacer_7">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>60</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </item>
+        <item row="0" column="1" rowspan="2">
+         <spacer name="horizontalSpacer_4">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
           </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item row="0" column="2" rowspan="2">
+         <widget class="QToolButton" name="btnStartStopStarSimulator">
           <property name="minimumSize">
            <size>
-            <width>490</width>
-            <height>100</height>
+            <width>70</width>
+            <height>68</height>
            </size>
           </property>
-          <property name="maximumSize">
+          <property name="text">
+           <string>Start
+Simulator</string>
+          </property>
+          <property name="icon">
+           <iconset resource="Pics.qrc">
+            <normaloff>:/pics/start.png</normaloff>:/pics/start.png</iconset>
+          </property>
+          <property name="iconSize">
            <size>
-            <width>540</width>
-            <height>900</height>
+            <width>32</width>
+            <height>32</height>
            </size>
+          </property>
+          <property name="toolButtonStyle">
+           <enum>Qt::ToolButtonTextUnderIcon</enum>
           </property>
          </widget>
         </item>
-        <item row="0" column="3">
+        <item row="0" column="3" rowspan="2">
+         <widget class="QToolButton" name="btnLoadInitialSolution">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>70</width>
+            <height>68</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Load
+Solution</string>
+          </property>
+          <property name="icon">
+           <iconset resource="Pics.qrc">
+            <normaloff>:/pics/database_up.png</normaloff>:/pics/database_up.png</iconset>
+          </property>
+          <property name="iconSize">
+           <size>
+            <width>32</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="toolButtonStyle">
+           <enum>Qt::ToolButtonTextUnderIcon</enum>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="4" rowspan="2">
          <widget class="QToolButton" name="btnSaveStarSimulatorData">
           <property name="enabled">
            <bool>false</bool>
@@ -3892,7 +4096,7 @@ p, li { white-space: pre-wrap; }
           <property name="minimumSize">
            <size>
             <width>70</width>
-            <height>0</height>
+            <height>68</height>
            </size>
           </property>
           <property name="text">
@@ -3913,56 +4117,93 @@ p, li { white-space: pre-wrap; }
           </property>
          </widget>
         </item>
-        <item row="0" column="2">
-         <widget class="QToolButton" name="btnStartStopStarSimulator">
+        <item row="0" column="5" rowspan="2">
+         <widget class="QGroupBox" name="starSettingsGroupBox">
           <property name="minimumSize">
            <size>
-            <width>80</width>
-            <height>0</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>Start Simulator</string>
-          </property>
-          <property name="icon">
-           <iconset resource="Pics.qrc">
-            <normaloff>:/pics/start.png</normaloff>:/pics/start.png</iconset>
-          </property>
-          <property name="iconSize">
-           <size>
-            <width>32</width>
-            <height>32</height>
-           </size>
-          </property>
-          <property name="toolButtonStyle">
-           <enum>Qt::ToolButtonTextUnderIcon</enum>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="4">
-         <spacer name="verticalSpacer_4">
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>20</width>
-            <height>61</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item row="0" column="5">
-         <widget class="QGroupBox" name="fitingAlgorithm">
-          <property name="minimumSize">
-           <size>
-            <width>190</width>
+            <width>130</width>
             <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
-            <width>200</width>
+            <width>150</width>
+            <height>75</height>
+           </size>
+          </property>
+          <property name="title">
+           <string>Star Settings</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_45">
+           <item row="0" column="0">
+            <widget class="QLabel" name="label_17">
+             <property name="text">
+              <string>Magnitude</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QLineEdit" name="starMagnitude">
+             <property name="minimumSize">
+              <size>
+               <width>40</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>40</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="inputMethodHints">
+              <set>Qt::ImhNone</set>
+             </property>
+             <property name="text">
+              <string>0</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_18">
+             <property name="text">
+              <string>Temperature</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QLineEdit" name="starTemperature">
+             <property name="minimumSize">
+              <size>
+               <width>40</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>40</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>7500</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="0" column="6" rowspan="2">
+         <widget class="QGroupBox" name="fitingAlgorithm">
+          <property name="minimumSize">
+           <size>
+            <width>150</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>150</width>
             <height>75</height>
            </size>
           </property>
@@ -3993,7 +4234,23 @@ p, li { white-space: pre-wrap; }
           </layout>
          </widget>
         </item>
-        <item row="1" column="2" colspan="4">
+        <item row="1" column="0" rowspan="3">
+         <widget class="QWidget" name="plotStarSimulator" native="true">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+            <horstretch>1</horstretch>
+            <verstretch>1</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>370</width>
+            <height>300</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="2" colspan="5">
          <widget class="QGroupBox" name="x0GroupBox">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -4009,7 +4266,7 @@ p, li { white-space: pre-wrap; }
           </property>
           <property name="maximumSize">
            <size>
-            <width>520</width>
+            <width>600</width>
             <height>400</height>
            </size>
           </property>
@@ -4035,12 +4292,12 @@ p, li { white-space: pre-wrap; }
             </widget>
            </item>
            <item row="0" column="2">
-            <widget class="QRadioButton" name="x0AGSearch">
+            <widget class="QRadioButton" name="x0DefinedInLedDriver">
              <property name="enabled">
-              <bool>false</bool>
+              <bool>true</bool>
              </property>
              <property name="text">
-              <string>Search x0 with Genetic Algorithm</string>
+              <string>Values defined in Led Driver</string>
              </property>
             </widget>
            </item>
@@ -6451,107 +6708,37 @@ p, li { white-space: pre-wrap; }
           </layout>
          </widget>
         </item>
-        <item row="0" column="0" rowspan="4">
-         <widget class="QWidget" name="plotStarSimulator" native="true">
+        <item row="3" column="2" colspan="5">
+         <widget class="QPlainTextEdit" name="starSimulatorLog">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
             <horstretch>1</horstretch>
-            <verstretch>1</verstretch>
+            <verstretch>10</verstretch>
            </sizepolicy>
           </property>
           <property name="minimumSize">
            <size>
-            <width>270</width>
-            <height>0</height>
-           </size>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="4">
-         <widget class="QGroupBox" name="starSettingsGroupBox">
-          <property name="minimumSize">
-           <size>
-            <width>135</width>
-            <height>0</height>
+            <width>490</width>
+            <height>100</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
-            <width>150</width>
-            <height>75</height>
+            <width>600</width>
+            <height>900</height>
            </size>
           </property>
-          <property name="title">
-           <string>Star Settings</string>
-          </property>
-          <layout class="QGridLayout" name="gridLayout_45">
-           <item row="0" column="0">
-            <widget class="QLabel" name="label_17">
-             <property name="text">
-              <string>Magnitude</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QLineEdit" name="starMagnitude">
-             <property name="minimumSize">
-              <size>
-               <width>45</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>40</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="inputMethodHints">
-              <set>Qt::ImhNone</set>
-             </property>
-             <property name="text">
-              <string>0</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="label_18">
-             <property name="text">
-              <string>Temperature</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="QLineEdit" name="starTemperature">
-             <property name="minimumSize">
-              <size>
-               <width>45</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>40</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>7500</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
          </widget>
         </item>
-        <item row="0" column="1">
-         <spacer name="horizontalSpacer_4">
+        <item row="4" column="5">
+         <spacer name="verticalSpacer_4">
           <property name="orientation">
-           <enum>Qt::Horizontal</enum>
+           <enum>Qt::Vertical</enum>
           </property>
           <property name="sizeHint" stdset="0">
            <size>
-            <width>40</width>
-            <height>20</height>
+            <width>17</width>
+            <height>9</height>
            </size>
           </property>
          </spacer>
@@ -6751,52 +6938,10 @@ p, li { white-space: pre-wrap; }
           </property>
          </widget>
         </item>
-        <item row="0" column="2">
-         <widget class="QToolButton" name="btnStartStopLongTermStability">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="minimumSize">
-           <size>
-            <width>70</width>
-            <height>0</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>Start Timer</string>
-          </property>
-          <property name="icon">
-           <iconset resource="Pics.qrc">
-            <normaloff>:/pics/start.png</normaloff>:/pics/start.png</iconset>
-          </property>
-          <property name="iconSize">
-           <size>
-            <width>32</width>
-            <height>32</height>
-           </size>
-          </property>
-          <property name="toolButtonStyle">
-           <enum>Qt::ToolButtonTextUnderIcon</enum>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="4">
-         <spacer name="horizontalSpacer_2">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>30</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
         <item row="0" column="6" rowspan="3">
          <layout class="QGridLayout" name="gridLayout_14">
           <property name="sizeConstraint">
-           <enum>QLayout::SetMaximumSize</enum>
+           <enum>QLayout::SetDefaultConstraint</enum>
           </property>
           <item row="0" column="2">
            <widget class="QToolButton" name="btnCreateDatabaseLongTermStability">
@@ -6844,7 +6989,7 @@ Database</string>
             </property>
             <property name="maximumSize">
              <size>
-              <width>600</width>
+              <width>800</width>
               <height>16777215</height>
              </size>
             </property>
@@ -6939,6 +7084,48 @@ Database</string>
           </item>
          </layout>
         </item>
+        <item row="0" column="4">
+         <spacer name="horizontalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>30</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item row="0" column="2">
+         <widget class="QToolButton" name="btnStartStopLongTermStability">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>70</width>
+            <height>68</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Start Timer</string>
+          </property>
+          <property name="icon">
+           <iconset resource="Pics.qrc">
+            <normaloff>:/pics/start.png</normaloff>:/pics/start.png</iconset>
+          </property>
+          <property name="iconSize">
+           <size>
+            <width>32</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="toolButtonStyle">
+           <enum>Qt::ToolButtonTextUnderIcon</enum>
+          </property>
+         </widget>
+        </item>
         <item row="1" column="0" colspan="2">
          <layout class="QVBoxLayout" name="verticalLayout_3">
           <item>
@@ -7026,7 +7213,7 @@ Database</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>820</width>
+     <width>950</width>
      <height>21</height>
     </rect>
    </property>
@@ -7041,13 +7228,14 @@ Database</string>
     <property name="title">
      <string>&amp;Help</string>
     </property>
-    <addaction name="actionAboutSMS500"/>
     <addaction name="actionAboutThisSoftware"/>
+    <addaction name="actionAboutSMS500"/>
    </widget>
    <widget class="QMenu" name="menuStarSimulatorSettings">
     <property name="title">
      <string>&amp;Star Simulator Settings</string>
     </property>
+    <addaction name="actionLoadInitialSolution"/>
     <addaction name="actionLoadTransferenceFunction"/>
    </widget>
    <addaction name="menuCalibration"/>
@@ -7096,6 +7284,11 @@ Database</string>
   <action name="actionLoadTransferenceFunction">
    <property name="text">
     <string>&amp;Load transference function table</string>
+   </property>
+  </action>
+  <action name="actionLoadInitialSolution">
+   <property name="text">
+    <string>Load &amp;initial solution</string>
    </property>
   </action>
  </widget>

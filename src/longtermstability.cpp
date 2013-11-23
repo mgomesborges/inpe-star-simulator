@@ -189,7 +189,7 @@ bool LongTermStability::saveSMS500andLedDriverParameters(
         int boxcarSmoothing,
         int noiseReduction,
         bool dynamicDark,
-        QStringList channelValue)
+        const QVector<int> &channelValue)
 {
     if (db.isOpen() == false) {
         lastErrorMessage = tr("Database not connected.");
@@ -217,7 +217,7 @@ bool LongTermStability::saveSMS500andLedDriverParameters(
                       "VALUES (:id, :channel, :digital_level)");
         query.bindValue(":id", id);
         query.bindValue(":channel", i + 25);
-        query.bindValue(":digital_level", channelValue.at(i).toInt());
+        query.bindValue(":digital_level", channelValue[i]);
 
         if (!query.exec()) {
             lastErrorMessage = tr("Error: cannot store SMS500 and LED Driver data in table.");

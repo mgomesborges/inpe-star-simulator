@@ -70,6 +70,7 @@ signals:
     void scanPerformed(QPolygonF points, int peakWavelength, double amplitude,
                        int scanNumber, int integrationTimeIndex, bool satured);
     void scanFinished();
+    void info(QString message);
 
 public slots:
 

@@ -23,7 +23,9 @@ SOURCES += main.cpp\
     longtermstabilityexportdialog.cpp \
     longtermstability.cpp \
     longtermstabilityalarmclock.cpp \
-    star.cpp
+    star.cpp \
+    filehandle.cpp \
+    utils.cpp
 
 HEADERS  += mainwindow.h \
     aboutsmsdialog.h \
@@ -38,7 +40,10 @@ HEADERS  += mainwindow.h \
     longtermstabilityexportdialog.h \
     longtermstability.h \
     longtermstabilityalarmclock.h \
-    star.h
+    star.h \
+    version.h \
+    filehandle.h \
+    utils.h
 
 FORMS    += mainwindow.ui \
     aboutsmsdialog.ui \
@@ -65,3 +70,8 @@ DEPENDPATH += $$PWD/
 
 win32: PRE_TARGETDEPS += $$PWD/SpecData.lib
 else:unix:!macx:!symbian: PRE_TARGETDEPS += $$PWD/libSpecData.a
+
+OTHER_FILES += \
+    project.rc
+
+win32:RC_FILE = project.rc

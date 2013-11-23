@@ -44,6 +44,8 @@ public slots:
     void enabledModelingContinue();
     bool writeData(const char *txBuffer);
     bool resetDACs();
+    bool configureVoltageRef();
+    bool setV2Ref(bool checked);
 
 private:
     void run();
@@ -51,6 +53,7 @@ private:
     FT_STATUS ftStatus;
     FT_HANDLE ftHandle;
     bool connected;
+    bool v2ref;
     int startChannel;
     int endChannel;
     int incDecValue;

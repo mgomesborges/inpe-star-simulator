@@ -354,6 +354,8 @@ bool SMS500::isNeedAutoScan()
 
 int SMS500::performAutoRange()
 {
+    emit info(tr("SMS-500: searching for best integration time value."));
+
     short average           = spectrometer.Channel[channel].Aveg;
     short boxCarSmoothing   = spectrometer.Channel[channel].BoxCar;
     bool correctDarkCurrent = spectrometer.Channel[channel].CorrDark;
@@ -405,6 +407,8 @@ int SMS500::performAutoRange()
     spectrometer.Channel[channel].BoxCar = boxCarSmoothing;
     spectrometer.Channel[channel].CorrDark = correctDarkCurrent;
     enableNoiseReduction = noiseReduction;
+
+    emit info(tr(""));
 
     return range;
 }

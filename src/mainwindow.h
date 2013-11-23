@@ -11,6 +11,9 @@
 #include <QMessageBox>
 #include <QDateTime>
 
+#include "utils.h"
+#include "filehandle.h"
+
 #include "plot.h"
 #include "star.h"
 #include "sms500.h"
@@ -21,6 +24,8 @@
 #include "longtermstability.h"
 #include "longtermstabilityalarmclock.h"
 #include "longtermstabilityexportdialog.h"
+
+#include "version.h"
 
 #include <Eigen/Dense>
 using namespace Eigen;
@@ -43,13 +48,14 @@ public:
 private:
     void uiInputValidator();
     void resizeEvent(QResizeEvent *);
+    double trapezoidalNumInteg(QPolygonF points);
     bool sms500Connect();
     void sms500Disconnect();
     void sms500Configure();
     void sms500SignalAndSlot();
     void ledDriverSignalAndSlot();
     void ledDriverConfigureDac(char dac);
-    QStringList ledDriverChannelValues();
+    QVector<int> ledDriverChannelValues();
     void lsqNonLinSignalAndSlot();
     MatrixXi lsqNonLinx0();
     void longTermStabilitySignalAndSlot();
@@ -66,6 +72,7 @@ private:
     char ledDriverTxBuffer[256];
     int ledModelingScanNumber;
     QString ledModelingFilePath;
+    QString ledModelingConfiguration;
     vector< vector<double> > ledModelingData;
 
     Star *lsqNonLinStar;
@@ -73,15 +80,19 @@ private:
     Plot *plotLSqNonLin;
     QTime lsqNonLinTime;
     QVector<double> transferenceFunction;
+    double outputIrradiance; // Updated in plotScanResult()
+    double starIrradiance;   // Updated in plotScanResult()
 
     LongTermStability *longTermStability;
     LongTermStabilityAlarmClock *longTermStabilityAlarmClock;
     Plot *plotLTS;
     int longTermStabilityScanNumber;
 
+    template <class T> QVector< QVector<T> > loadData(const QString &title, const QString &filter, const QString &section);
+
 private slots:
     void statusBarMessage(QString message);
-    void warningMessage(QString title, QString message);
+    void warningMessage(const QString &caption, const QString &message);
     void aboutThisSoftware();
     void aboutSMS500();
 
@@ -104,12 +115,15 @@ private slots:
     void selected(const QPolygon&);
     void showInfo(const QString &text = QString::null);
 
-    void sms500SaveScanData();
-    void sms500SaveScanData(const QString &filePath);
+    void sms500SaveScanData(const QString &filePath = QString());
+    QString sms500MainData();
 
     bool ledDriverConnect();
     void ledDriverDisconnect();
     void ledDriverConnectDisconnect();
+    bool ledDriverLoadValuesForChannels();
+    void ledDriverGuiUpdate(QVector<int> level);
+    void ledDriverSetV2Ref(bool enable);
     void ledDriverDac04Changed();
     void ledDriverDac05Changed();
     void ledDriverDac06Changed();
@@ -137,8 +151,11 @@ private slots:
     void lsqNonLinLoadLedData();
     void lsqNonLinx0Handle();
     void lsqNonLinLog(QString info);
+    void lsqNonLinSaveData();
+    bool lsqNonLinLoadInitialSolution();
     bool starLoadTransferenceFunction();
     bool starUpdateTransferenceFunction();
+    void lsqNonLinInitialSolutionGuiUpdate(QVector<int> initialSolution);
 
     void longTermStabilityCreateDB();
     void longTermStabilityOpenDB();

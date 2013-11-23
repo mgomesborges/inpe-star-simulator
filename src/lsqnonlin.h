@@ -18,7 +18,7 @@ public:
     {
         x0Random = 0,
         x0UserDefined,
-        x0GeneticAlgorithmSearch
+        x0Current
     };
 
     enum algorithm
@@ -51,7 +51,6 @@ public slots:
 
 private:
     bool initialized;
-    bool initialSolutionLoaded;
     bool enabledToContinue;
     bool stopThread;
     int chosenAlgorithm;
