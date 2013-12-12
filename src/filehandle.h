@@ -41,7 +41,8 @@ public:
     bool save(QWidget *parent, const QString &data, const QString &caption);
     bool save(const QString &data, const QString &caption, const QString &filePath);
 
-    QVector< QVector<int> > data(const QString &section = QString(), bool *ok = 0);
+    QVector< QVector<double> > data(const QString &section = QString(), bool *ok = 0);
+    QString readSection(const QString &section = QString(), bool *ok = 0);
     bool isValidData(int rows = 0, int columns = 0);
 
 private:
@@ -50,7 +51,7 @@ private:
     QFile outFile;
     bool inStatus;
     bool outStatus;
-    QVector< QVector<int> > matrix;
+    QVector< QVector<double> > matrix;
 };
 
 #endif // FILEHANDLE_H

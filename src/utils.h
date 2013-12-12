@@ -17,8 +17,10 @@ public:
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-    static QVector<int> eigen2QVector(MatrixXi matrix);
+    static QVector<double> eigen2QVector(MatrixXi matrix);
+    static MatrixXd qvector2eigen(const QVector< QVector<double> > &matrix);
     static QVector<int> matrix2vector(const QVector< QVector<int> > &matrix, int column);
+    static QVector<double> matrix2vector(const QVector< QVector<double> > &matrix, int column);
 };
 
 #endif // UTILS_H

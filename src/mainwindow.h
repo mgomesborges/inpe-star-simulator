@@ -122,7 +122,7 @@ private slots:
     void ledDriverDisconnect();
     void ledDriverConnectDisconnect();
     bool ledDriverLoadValuesForChannels();
-    void ledDriverGuiUpdate(QVector<int> level);
+    void ledDriverGuiUpdate(QVector<double> level);
     void ledDriverSetV2Ref(bool enable);
     void ledDriverDac04Changed();
     void ledDriverDac05Changed();
@@ -155,7 +155,7 @@ private slots:
     bool lsqNonLinLoadInitialSolution();
     bool starLoadTransferenceFunction();
     bool starUpdateTransferenceFunction();
-    void lsqNonLinInitialSolutionGuiUpdate(QVector<int> initialSolution);
+    void lsqNonLinInitialSolutionGuiUpdate(QVector<double> initialSolution);
 
     void longTermStabilityCreateDB();
     void longTermStabilityOpenDB();

@@ -62,7 +62,9 @@ void LSqLoadLedDataDialog::processFinished()
 {
     status = true;
     this->close();
-    QMessageBox::information(this, tr("Load LED Data"), tr("Procedure successfully completed."));
+    if (loadData->status() == true) {
+        QMessageBox::information(this, tr("Load LED Data"), tr("Procedure successfully completed."));
+    }
 }
 
 bool LSqLoadLedDataDialog::performed()

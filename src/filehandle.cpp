@@ -97,7 +97,7 @@ bool FileHandle::save(const QString &data, const QString &caption, const QString
     return true;
 }
 
-QVector< QVector<int> > FileHandle::data(const QString &section, bool *ok)
+QVector< QVector<double> > FileHandle::data(const QString &section, bool *ok)
 {
     if (inStatus == true) {
         QTextStream in(&inFile);
@@ -140,7 +140,7 @@ QVector< QVector<int> > FileHandle::data(const QString &section, bool *ok)
             // Is other section or line without data?
             if (line.count() <= 2) {
                 if (matrix.isEmpty()) {
-                    QMessageBox::warning(0, caption, tr("Data not foud.\t"));
+                    QMessageBox::warning(0, caption, tr("Data not found.\t"));
                 }
                 break;
             }
@@ -148,7 +148,7 @@ QVector< QVector<int> > FileHandle::data(const QString &section, bool *ok)
             fields = line.split("\t");
             matrix.resize(matrix.size() + 1);
             for (int i = 0; i < fields.length(); i++) {
-                fields.at(i).toInt(ok);
+                fields.at(i).toDouble(ok);
 
                 if (*ok == false) {
                     QMessageBox::warning(0, caption, tr("Invalid data at line %1, column %2.\t")
@@ -157,12 +157,61 @@ QVector< QVector<int> > FileHandle::data(const QString &section, bool *ok)
                     return matrix;
                 }
 
-                matrix[matrix.size() - 1].append(fields.at(i).toInt());
+                matrix[matrix.size() - 1].append(fields.at(i).toDouble());
             }
         }
     }
 
     return matrix;
+}
+
+QString FileHandle::readSection(const QString &section, bool *ok)
+{
+    QString data;
+
+    if (inStatus == true) {
+        QTextStream in(&inFile);
+        QString line;
+
+        // Prevents errors in case of "ok" not to be passed as argument
+        if (ok == 0) {
+            ok = new bool;
+        }
+
+        // Find section
+        *ok = false;
+        do {
+            line = in.readLine();
+
+            if (line.contains(section)) {
+                *ok = true;
+            }
+        } while ((*ok == false) && !in.atEnd());
+
+        if (*ok == false) {
+            QMessageBox::warning(0, caption, tr("Section %1 not found.\t").arg(section));
+            return data; // size zero
+        }
+
+        // Read data
+        data.append(line + "\n"); // First line contains section's name
+
+        while (!in.atEnd()) {
+            line   = in.readLine();
+
+            // Is other section or line without data?
+            if (line.count() <= 2) {
+                if (data.isEmpty()) {
+                    QMessageBox::warning(0, caption, tr("Data not found.\t"));
+                }
+                break;
+            }
+
+            data.append(line + "\n");
+        }
+    }
+
+    return data;
 }
 
 bool FileHandle::isValidData(int rows, int columns)

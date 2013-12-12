@@ -226,7 +226,7 @@ void MainWindow::ledDriverConnectDisconnect()
 bool MainWindow::ledDriverLoadValuesForChannels()
 {
     FileHandle file(this, tr("LED Driver - Load values for channels"));
-    QVector< QVector<int> > values = file.data(tr("[ChannelLevel]"));
+    QVector< QVector<double> > values = file.data(tr("[ChannelLevel]"));
 
     if (file.isValidData(72, 2) == false) {
         return false;
@@ -249,7 +249,7 @@ bool MainWindow::ledDriverLoadValuesForChannels()
     return true;
 }
 
-void MainWindow::ledDriverGuiUpdate(QVector<int> level)
+void MainWindow::ledDriverGuiUpdate(QVector<double> level)
 {
     ui->dac04channel25->setText(QString::number(level[0]));
     ui->dac04channel26->setText(QString::number(level[1]));
@@ -1311,7 +1311,7 @@ void MainWindow::lsqNonLinSaveData()
 bool MainWindow::lsqNonLinLoadInitialSolution()
 {
     FileHandle file(this, tr("Star Simulator - Initial Solution"));
-    QVector< QVector<int> > initialSolution = file.data(tr("[ChannelLevel]"));
+    QVector< QVector<double> > initialSolution = file.data(tr("[ChannelLevel]"));
 
     if (file.isValidData(72, 2) == false) {
         return false;
@@ -1326,64 +1326,39 @@ bool MainWindow::lsqNonLinLoadInitialSolution()
 
 bool MainWindow::starLoadTransferenceFunction()
 {
-    transferenceFunction.resize(641);
-
-    // Opens input data in txt file
     QString filePath = QDir::currentPath() + "/transferenceFunction.txt";
-    QFile file(filePath);
-    if (!file.exists()) {
-        for (int i = 0; i < 641; i++) {
-            transferenceFunction[i] = 1;
-        }
+
+    FileHandle file(tr("Load Transference Function"), filePath);
+    QVector<double> data = Utils::matrix2vector(file.data(tr("[TransferenceFunction]")), 1);
+
+    if (file.isValidData(641) == false) {
         return false;
     }
-    file.open(QIODevice::ReadOnly);
-    QTextStream in(&file);
-    QString line;
-    QStringList fields;
 
-    in.seek(0); // Reposition to beginning of file
-
-    for (int i = 0; i < 641; i++) {
-        line   = in.readLine();
-        fields = line.split("\t");
-        transferenceFunction[i] = fields.at(1).toDouble();
-    }
-    file.close();
+    transferenceFunction = data;
 
     return true;
 }
 
 bool MainWindow::starUpdateTransferenceFunction()
 {
-    QString filePath = QFileDialog::getOpenFileName(this);
+    bool ok;
 
-    if (filePath.isEmpty()) {
+    FileHandle fileInput(this, tr("Load Transference Function"));
+    QString data = fileInput.readSection(tr("[TransferenceFunction]"), &ok);
+
+    if (ok == false) {
         return false;
     }
 
-    QFile inFile(filePath);
-    inFile.open(QIODevice::ReadOnly);
-    QTextStream in(&inFile);
-
-    // Saves output data
     QString outFilePath = QDir::currentPath() + "/transferenceFunction.txt";
-    QFile outFile(outFilePath);
-    if (!outFile.open(QIODevice::WriteOnly)) {
-        statusBar()->showMessage(tr("Transference function: an error occurred while loading file."));
-        return false;
-    }
-    QTextStream out(&outFile);
-    out << in.readAll();
-
-    outFile.close();
-    inFile.close();
+    FileHandle fileOutput(data, tr("Load Transference Function"), outFilePath);
 
     statusBar()->showMessage(tr("Transference function successfully loaded"));
     return true;
 }
 
-void MainWindow::lsqNonLinInitialSolutionGuiUpdate(QVector<int> initialSolution)
+void MainWindow::lsqNonLinInitialSolutionGuiUpdate(QVector<double> initialSolution)
 {
     ui->initialSolution_ch25->setText(QString::number(initialSolution[0]));
     ui->initialSolution_ch26->setText(QString::number(initialSolution[1]));

@@ -3,7 +3,12 @@
 LSqLoadLedData::LSqLoadLedData(QObject *parent, QString path) :
     QThread(parent)
 {
-    inputPath = path;
+    inputPath       = path;
+}
+
+bool LSqLoadLedData::status()
+{
+    return isLoadCompleted;
 }
 
 void LSqLoadLedData::stop()
@@ -19,7 +24,10 @@ void LSqLoadLedData::run()
     // Derivative Step is negative because the digital level is from 4095 to 0
     signed int derivativeStep = -1;
 
-    stopThread = false;
+    QString section("[SMS500InterpolatedData]");
+
+    stopThread      = false;
+    isLoadCompleted = false;
 
     // Computing Derivatives for all channels
     for (int channel = 25; channel <= 96; channel++) {
@@ -38,16 +46,42 @@ void LSqLoadLedData::run()
         }
         file.open(QIODevice::ReadOnly);
         QTextStream in(&file);
-        QString line       = in.readLine();
-        QStringList fields = line.split("\t");
-        numberOfRows       = 641;
-        numberOfColumns    = fields.size();
+        QStringList fields;
+        QString line;
+        bool ok;
+
+        // Find section
+        ok = false;
+        do {
+            line = in.readLine();
+
+            if (line.contains(section)) {
+                ok = true;
+            }
+        } while ((ok == false) && !in.atEnd());
+
+        if (ok == false) {
+            QMessageBox::warning(0, tr("Computing Derivatives"),
+                                 tr("File [%1], section %2 not found.\t")
+                                 .arg(QString::number(channel) + ".txt")
+                                 .arg(section));
+            return;
+        }
+
+        // Get number of rows and columns
+        int pos         = in.pos();
+        line            = in.readLine();
+        fields          = line.split("\t");
+        numberOfRows    = 641;
+        numberOfColumns = fields.size();
+
+        // Reposition to beginning of data
+        in.seek(pos);
 
         // Define matrix of floats, see Eigen Matrix documentation
         MatrixXd matrix(numberOfRows, numberOfColumns);
 
-        // Reposition to beginning of file
-        in.seek(0);
+        // Read data
         for (int i = 0; i < numberOfRows; i++) {
             line   = in.readLine();
             fields = line.split("\t");
@@ -82,4 +116,6 @@ void LSqLoadLedData::run()
         }
         outFile.close();
     }
+
+    isLoadCompleted = true;
 }
