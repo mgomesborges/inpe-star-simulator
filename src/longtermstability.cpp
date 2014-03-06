@@ -50,7 +50,11 @@ bool LongTermStability::createDB(const QString &filePath)
                                  "samples_to_average INTEGER, "
                                  "boxcar_smoothing INTEGER, "
                                  "noise_reduction INTEGER, "
-                                 "dynamic_dark INTEGER);");
+                                 "dynamic_dark INTEGER, "
+                                 "v2ref INTEGER, "
+                                 "star_magnitude INTEGER, "
+                                 "star_temperature INTEGER, "
+                                 "fiting_algorithm INTEGER);");
 
         queryReturn &= query.exec("CREATE TABLE led_driver_configuration("
                                   "id INTEGER, "
@@ -189,6 +193,10 @@ bool LongTermStability::saveSMS500andLedDriverParameters(
         int boxcarSmoothing,
         int noiseReduction,
         bool dynamicDark,
+        bool v2ref,
+        int star_magnitude,
+        int star_temperature,
+        int fiting_algorithm,
         const QVector<int> &channelValue)
 {
     if (db.isOpen() == false) {
@@ -197,8 +205,8 @@ bool LongTermStability::saveSMS500andLedDriverParameters(
     }
 
     QSqlQuery query;
-    query.prepare("INSERT INTO parameters (id, start_wavelength, stop_wavelength, integration_time, samples_to_average, boxcar_smoothing, noise_reduction, dynamic_dark) "
-                  "VALUES (:id, :start_wavelength, :stop_wavelength, :integration_time, :samples_to_average, :boxcar_smoothing, :noise_reduction, :dynamic_dark)");
+    query.prepare("INSERT INTO parameters (id, start_wavelength, stop_wavelength, integration_time, samples_to_average, boxcar_smoothing, noise_reduction, dynamic_dark, v2ref, star_magnitude, star_temperature, fiting_algorithm) "
+                  "VALUES (:id, :start_wavelength, :stop_wavelength, :integration_time, :samples_to_average, :boxcar_smoothing, :noise_reduction, :dynamic_dark, :v2ref, :star_magnitude, :star_temperature, :fiting_algorithm)");
     query.bindValue(":id", id);
     query.bindValue(":start_wavelength", startWavelength);
     query.bindValue(":stop_wavelength", stopWavelength);
@@ -207,6 +215,11 @@ bool LongTermStability::saveSMS500andLedDriverParameters(
     query.bindValue(":boxcar_smoothing", boxcarSmoothing);
     query.bindValue(":noise_reduction", noiseReduction);
     query.bindValue(":dynamic_dark", dynamicDark);
+    query.bindValue(":v2ref", v2ref);
+    query.bindValue(":star_magnitude", star_magnitude);
+    query.bindValue(":star_temperature", star_temperature);
+    query.bindValue(":fiting_algorithm", fiting_algorithm);
+
     if (query.exec() == false) {
         lastErrorMessage = tr("Error: cannot store SMS500 and LED Driver data in table.");
         return false;
@@ -391,6 +404,21 @@ void LongTermStability::run()
     outScanData << "Noise Reduction...: " << record.value(6).toInt() << "\n";
     outScanData << "Dynamic Dark......: " << record.value(7).toInt() << "\n";
 
+    outScanData << "\n[LedDriver]\n";
+    if (record.value(8).toInt() == 1) {
+        outScanData << "V2REF: on\n";
+    } else {
+        outScanData << "V2REF: off\n";
+    }
+
+    outScanData << "\n[StarSimulatorSettings]\n";
+    outScanData << "; #1: Magnitude\n";
+    outScanData << "; #2: Temperature\n";
+    outScanData << "; #3: Fiting Algorithm [0] LM, [1] GD\n";
+    outScanData << record.value(9).toInt() << "\n";
+    outScanData << record.value(10).toInt() << "\n";
+    outScanData << record.value(11).toInt() << "\n";
+
     // Star and Stop wavelength values
     startWavelength = record.value(1).toInt();
     stopWavelength  = record.value(2).toInt();
@@ -399,7 +427,7 @@ void LongTermStability::run()
     ledDriverConfigurationModel->setTable("led_driver_configuration");
     ledDriverConfigurationModel->select();
 
-    outScanData << "\nLED Driver Configuration\n";
+    outScanData << "\n[ChannelLevel]\n";
 
     for (int row = 0; row < ledDriverConfigurationModel->rowCount(); ++row) {
         msleep(1); // wait 1ms for continue, see Qt Thread's Documentation
@@ -418,7 +446,7 @@ void LongTermStability::run()
         }
 
         QSqlRecord record = ledDriverConfigurationModel->record(row);
-        outScanData << "ch" << row + 25 << ": " << record.value(2).toInt() << "\n";
+        outScanData << row + 25 << "\t" << record.value(2).toInt() << "\n";
     }
 
     // SQL Statments

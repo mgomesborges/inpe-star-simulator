@@ -235,6 +235,16 @@ bool MainWindow::ledDriverLoadValuesForChannels()
     // Update LED Driver GUI
     ledDriverGuiUpdate(Utils::matrix2vector(values, 1));
 
+    // V2REF
+    QString v2ref = file.readSection(tr("[LedDriver]"));
+    if (v2ref.isEmpty() == false) {
+        if (v2ref.contains("on")) {
+            ui->setV2RefCheckBox->setChecked(true);
+        } else {
+            ui->setV2RefCheckBox->setChecked(false);
+        }
+    }
+
     // Update LED Driver
     ledDriverDac04Changed();
     ledDriverDac05Changed();
@@ -328,6 +338,12 @@ void MainWindow::ledDriverGuiUpdate(QVector<double> level)
 void MainWindow::ledDriverSetV2Ref(bool enable)
 {
     ledDriver->setV2Ref(enable);
+}
+
+void MainWindow::ledDriverConfigureConnection()
+{
+    FTDIDeviceChooserDialog ftdiDevice;
+    ftdiDevice.exec();
 }
 
 bool MainWindow::ledDriverConnect()
@@ -774,6 +790,14 @@ void MainWindow::ledModelingSaveChannelData(QString channel)
     data.append(tr("; #1 [0] Increment\t[1] Decrement\n"));
     data.append(tr("; #2 value\n"));
     data.append(tr("%1\n").arg(ledModelingConfiguration));
+
+    data.append(tr("\n[LedDriver]\n"));
+    if (ui->setV2RefCheckBox->isChecked()) {
+        data.append(tr("V2REF: on\n"));
+    } else {
+        data.append(tr("V2REF: off\n"));
+    }
+
     data.append(tr("\n[SMS500Data]\n"));
     data.append(tr("; Holds the Wavelength Data:\n"));
     data.append(tr("; nm\tuW/nm DigitalLevel\n"));
@@ -895,7 +919,7 @@ void MainWindow::lsqNonLinStart()
     ui->numberOfScansLineEdit->setEnabled(false);
     ui->AutoRangeCheckBox->setChecked(true);
     ui->sms500WavelengthGroupBox->setEnabled(false);
-//    ui->samplesToAverageSpinBox->setValue(20);
+    //    ui->samplesToAverageSpinBox->setValue(20);
     ui->smoothingSpinBox->setValue(1);
     ui->dynamicDarkCheckBox->setChecked(true);
     ui->modesOfOperation->setEnabled(true);
@@ -1016,6 +1040,10 @@ void MainWindow::lsqNonLinFinished()
 
 void MainWindow::lsqNonLinStarSettings()
 {
+    if(ui->starTemperature->text().toInt() < 100) {
+        ui->starTemperature->setText("100");
+    }
+
     lsqNonLinStar->setMagnitude(ui->starMagnitude->text().toInt());
     lsqNonLinStar->setTemperature(ui->starTemperature->text().toInt());
 
@@ -1107,153 +1135,85 @@ void MainWindow::lsqNonLinLoadLedData()
 
 void MainWindow::lsqNonLinx0Handle()
 {
+    bool enabled;
     if (ui->x0UserDefined->isChecked()) {
-        ui->initialSolution_ch25->setEnabled(true);
-        ui->initialSolution_ch26->setEnabled(true);
-        ui->initialSolution_ch27->setEnabled(true);
-        ui->initialSolution_ch28->setEnabled(true);
-        ui->initialSolution_ch29->setEnabled(true);
-        ui->initialSolution_ch30->setEnabled(true);
-        ui->initialSolution_ch31->setEnabled(true);
-        ui->initialSolution_ch32->setEnabled(true);
-        ui->initialSolution_ch33->setEnabled(true);
-        ui->initialSolution_ch34->setEnabled(true);
-        ui->initialSolution_ch35->setEnabled(true);
-        ui->initialSolution_ch36->setEnabled(true);
-        ui->initialSolution_ch37->setEnabled(true);
-        ui->initialSolution_ch38->setEnabled(true);
-        ui->initialSolution_ch39->setEnabled(true);
-        ui->initialSolution_ch40->setEnabled(true);
-        ui->initialSolution_ch41->setEnabled(true);
-        ui->initialSolution_ch42->setEnabled(true);
-        ui->initialSolution_ch43->setEnabled(true);
-        ui->initialSolution_ch44->setEnabled(true);
-        ui->initialSolution_ch45->setEnabled(true);
-        ui->initialSolution_ch46->setEnabled(true);
-        ui->initialSolution_ch47->setEnabled(true);
-        ui->initialSolution_ch48->setEnabled(true);
-        ui->initialSolution_ch49->setEnabled(true);
-        ui->initialSolution_ch50->setEnabled(true);
-        ui->initialSolution_ch51->setEnabled(true);
-        ui->initialSolution_ch52->setEnabled(true);
-        ui->initialSolution_ch53->setEnabled(true);
-        ui->initialSolution_ch54->setEnabled(true);
-        ui->initialSolution_ch55->setEnabled(true);
-        ui->initialSolution_ch56->setEnabled(true);
-        ui->initialSolution_ch57->setEnabled(true);
-        ui->initialSolution_ch58->setEnabled(true);
-        ui->initialSolution_ch59->setEnabled(true);
-        ui->initialSolution_ch60->setEnabled(true);
-        ui->initialSolution_ch61->setEnabled(true);
-        ui->initialSolution_ch62->setEnabled(true);
-        ui->initialSolution_ch63->setEnabled(true);
-        ui->initialSolution_ch64->setEnabled(true);
-        ui->initialSolution_ch65->setEnabled(true);
-        ui->initialSolution_ch66->setEnabled(true);
-        ui->initialSolution_ch67->setEnabled(true);
-        ui->initialSolution_ch68->setEnabled(true);
-        ui->initialSolution_ch69->setEnabled(true);
-        ui->initialSolution_ch70->setEnabled(true);
-        ui->initialSolution_ch71->setEnabled(true);
-        ui->initialSolution_ch72->setEnabled(true);
-        ui->initialSolution_ch73->setEnabled(true);
-        ui->initialSolution_ch74->setEnabled(true);
-        ui->initialSolution_ch75->setEnabled(true);
-        ui->initialSolution_ch76->setEnabled(true);
-        ui->initialSolution_ch77->setEnabled(true);
-        ui->initialSolution_ch78->setEnabled(true);
-        ui->initialSolution_ch79->setEnabled(true);
-        ui->initialSolution_ch80->setEnabled(true);
-        ui->initialSolution_ch81->setEnabled(true);
-        ui->initialSolution_ch82->setEnabled(true);
-        ui->initialSolution_ch83->setEnabled(true);
-        ui->initialSolution_ch84->setEnabled(true);
-        ui->initialSolution_ch85->setEnabled(true);
-        ui->initialSolution_ch86->setEnabled(true);
-        ui->initialSolution_ch87->setEnabled(true);
-        ui->initialSolution_ch88->setEnabled(true);
-        ui->initialSolution_ch89->setEnabled(true);
-        ui->initialSolution_ch90->setEnabled(true);
-        ui->initialSolution_ch91->setEnabled(true);
-        ui->initialSolution_ch92->setEnabled(true);
-        ui->initialSolution_ch93->setEnabled(true);
-        ui->initialSolution_ch94->setEnabled(true);
-        ui->initialSolution_ch95->setEnabled(true);
-        ui->initialSolution_ch96->setEnabled(true);
+        enabled = true;
     } else {
-        ui->initialSolution_ch25->setEnabled(false);
-        ui->initialSolution_ch26->setEnabled(false);
-        ui->initialSolution_ch27->setEnabled(false);
-        ui->initialSolution_ch28->setEnabled(false);
-        ui->initialSolution_ch29->setEnabled(false);
-        ui->initialSolution_ch30->setEnabled(false);
-        ui->initialSolution_ch31->setEnabled(false);
-        ui->initialSolution_ch32->setEnabled(false);
-        ui->initialSolution_ch33->setEnabled(false);
-        ui->initialSolution_ch34->setEnabled(false);
-        ui->initialSolution_ch35->setEnabled(false);
-        ui->initialSolution_ch36->setEnabled(false);
-        ui->initialSolution_ch37->setEnabled(false);
-        ui->initialSolution_ch38->setEnabled(false);
-        ui->initialSolution_ch39->setEnabled(false);
-        ui->initialSolution_ch40->setEnabled(false);
-        ui->initialSolution_ch41->setEnabled(false);
-        ui->initialSolution_ch42->setEnabled(false);
-        ui->initialSolution_ch43->setEnabled(false);
-        ui->initialSolution_ch44->setEnabled(false);
-        ui->initialSolution_ch45->setEnabled(false);
-        ui->initialSolution_ch46->setEnabled(false);
-        ui->initialSolution_ch47->setEnabled(false);
-        ui->initialSolution_ch48->setEnabled(false);
-        ui->initialSolution_ch49->setEnabled(false);
-        ui->initialSolution_ch50->setEnabled(false);
-        ui->initialSolution_ch51->setEnabled(false);
-        ui->initialSolution_ch52->setEnabled(false);
-        ui->initialSolution_ch53->setEnabled(false);
-        ui->initialSolution_ch54->setEnabled(false);
-        ui->initialSolution_ch55->setEnabled(false);
-        ui->initialSolution_ch56->setEnabled(false);
-        ui->initialSolution_ch57->setEnabled(false);
-        ui->initialSolution_ch58->setEnabled(false);
-        ui->initialSolution_ch59->setEnabled(false);
-        ui->initialSolution_ch60->setEnabled(false);
-        ui->initialSolution_ch61->setEnabled(false);
-        ui->initialSolution_ch62->setEnabled(false);
-        ui->initialSolution_ch63->setEnabled(false);
-        ui->initialSolution_ch64->setEnabled(false);
-        ui->initialSolution_ch65->setEnabled(false);
-        ui->initialSolution_ch66->setEnabled(false);
-        ui->initialSolution_ch67->setEnabled(false);
-        ui->initialSolution_ch68->setEnabled(false);
-        ui->initialSolution_ch69->setEnabled(false);
-        ui->initialSolution_ch70->setEnabled(false);
-        ui->initialSolution_ch71->setEnabled(false);
-        ui->initialSolution_ch72->setEnabled(false);
-        ui->initialSolution_ch73->setEnabled(false);
-        ui->initialSolution_ch74->setEnabled(false);
-        ui->initialSolution_ch75->setEnabled(false);
-        ui->initialSolution_ch76->setEnabled(false);
-        ui->initialSolution_ch77->setEnabled(false);
-        ui->initialSolution_ch78->setEnabled(false);
-        ui->initialSolution_ch79->setEnabled(false);
-        ui->initialSolution_ch80->setEnabled(false);
-        ui->initialSolution_ch81->setEnabled(false);
-        ui->initialSolution_ch82->setEnabled(false);
-        ui->initialSolution_ch83->setEnabled(false);
-        ui->initialSolution_ch84->setEnabled(false);
-        ui->initialSolution_ch85->setEnabled(false);
-        ui->initialSolution_ch86->setEnabled(false);
-        ui->initialSolution_ch87->setEnabled(false);
-        ui->initialSolution_ch88->setEnabled(false);
-        ui->initialSolution_ch89->setEnabled(false);
-        ui->initialSolution_ch90->setEnabled(false);
-        ui->initialSolution_ch91->setEnabled(false);
-        ui->initialSolution_ch92->setEnabled(false);
-        ui->initialSolution_ch93->setEnabled(false);
-        ui->initialSolution_ch94->setEnabled(false);
-        ui->initialSolution_ch95->setEnabled(false);
-        ui->initialSolution_ch96->setEnabled(false);
+        enabled = false;
     }
+
+    ui->initialSolution_ch25->setEnabled(enabled);
+    ui->initialSolution_ch26->setEnabled(enabled);
+    ui->initialSolution_ch27->setEnabled(enabled);
+    ui->initialSolution_ch28->setEnabled(enabled);
+    ui->initialSolution_ch29->setEnabled(enabled);
+    ui->initialSolution_ch30->setEnabled(enabled);
+    ui->initialSolution_ch31->setEnabled(enabled);
+    ui->initialSolution_ch32->setEnabled(enabled);
+    ui->initialSolution_ch33->setEnabled(enabled);
+    ui->initialSolution_ch34->setEnabled(enabled);
+    ui->initialSolution_ch35->setEnabled(enabled);
+    ui->initialSolution_ch36->setEnabled(enabled);
+    ui->initialSolution_ch37->setEnabled(enabled);
+    ui->initialSolution_ch38->setEnabled(enabled);
+    ui->initialSolution_ch39->setEnabled(enabled);
+    ui->initialSolution_ch40->setEnabled(enabled);
+    ui->initialSolution_ch41->setEnabled(enabled);
+    ui->initialSolution_ch42->setEnabled(enabled);
+    ui->initialSolution_ch43->setEnabled(enabled);
+    ui->initialSolution_ch44->setEnabled(enabled);
+    ui->initialSolution_ch45->setEnabled(enabled);
+    ui->initialSolution_ch46->setEnabled(enabled);
+    ui->initialSolution_ch47->setEnabled(enabled);
+    ui->initialSolution_ch48->setEnabled(enabled);
+    ui->initialSolution_ch49->setEnabled(enabled);
+    ui->initialSolution_ch50->setEnabled(enabled);
+    ui->initialSolution_ch51->setEnabled(enabled);
+    ui->initialSolution_ch52->setEnabled(enabled);
+    ui->initialSolution_ch53->setEnabled(enabled);
+    ui->initialSolution_ch54->setEnabled(enabled);
+    ui->initialSolution_ch55->setEnabled(enabled);
+    ui->initialSolution_ch56->setEnabled(enabled);
+    ui->initialSolution_ch57->setEnabled(enabled);
+    ui->initialSolution_ch58->setEnabled(enabled);
+    ui->initialSolution_ch59->setEnabled(enabled);
+    ui->initialSolution_ch60->setEnabled(enabled);
+    ui->initialSolution_ch61->setEnabled(enabled);
+    ui->initialSolution_ch62->setEnabled(enabled);
+    ui->initialSolution_ch63->setEnabled(enabled);
+    ui->initialSolution_ch64->setEnabled(enabled);
+    ui->initialSolution_ch65->setEnabled(enabled);
+    ui->initialSolution_ch66->setEnabled(enabled);
+    ui->initialSolution_ch67->setEnabled(enabled);
+    ui->initialSolution_ch68->setEnabled(enabled);
+    ui->initialSolution_ch69->setEnabled(enabled);
+    ui->initialSolution_ch70->setEnabled(enabled);
+    ui->initialSolution_ch71->setEnabled(enabled);
+    ui->initialSolution_ch72->setEnabled(enabled);
+    ui->initialSolution_ch73->setEnabled(enabled);
+    ui->initialSolution_ch74->setEnabled(enabled);
+    ui->initialSolution_ch75->setEnabled(enabled);
+    ui->initialSolution_ch76->setEnabled(enabled);
+    ui->initialSolution_ch77->setEnabled(enabled);
+    ui->initialSolution_ch78->setEnabled(enabled);
+    ui->initialSolution_ch79->setEnabled(enabled);
+    ui->initialSolution_ch80->setEnabled(enabled);
+    ui->initialSolution_ch81->setEnabled(enabled);
+    ui->initialSolution_ch82->setEnabled(enabled);
+    ui->initialSolution_ch83->setEnabled(enabled);
+    ui->initialSolution_ch84->setEnabled(enabled);
+    ui->initialSolution_ch85->setEnabled(enabled);
+    ui->initialSolution_ch86->setEnabled(enabled);
+    ui->initialSolution_ch87->setEnabled(enabled);
+    ui->initialSolution_ch88->setEnabled(enabled);
+    ui->initialSolution_ch89->setEnabled(enabled);
+    ui->initialSolution_ch90->setEnabled(enabled);
+    ui->initialSolution_ch91->setEnabled(enabled);
+    ui->initialSolution_ch92->setEnabled(enabled);
+    ui->initialSolution_ch93->setEnabled(enabled);
+    ui->initialSolution_ch94->setEnabled(enabled);
+    ui->initialSolution_ch95->setEnabled(enabled);
+    ui->initialSolution_ch96->setEnabled(enabled);
 }
 
 void MainWindow::lsqNonLinLog(QString info)
@@ -1269,13 +1229,29 @@ void MainWindow::lsqNonLinSaveData()
     data.append(tr("; Star Simulator file, Platform: Windows, Created on: %1\n\n").arg(currentTime));
     data.append(sms500MainData());
     data.append(tr("; Output irradiance.......: %1\n").arg(outputIrradiance));
-    data.append(tr("; Star irradiance.........: %1\n\n").arg(starIrradiance));
-    data.append(tr("[ChannelLevel]\n"));
+    data.append(tr("; Star irradiance.........: %1\n").arg(starIrradiance));
+
+    data.append(tr("\n[LedDriver]\n"));
+    if (ui->setV2RefCheckBox->isChecked()) {
+        data.append(tr("V2REF: on\n"));
+    } else {
+        data.append(tr("V2REF: off\n"));
+    }
+
+    data.append(tr("\n[ChannelLevel]\n"));
 
     QVector<int> channelValues = ledDriverChannelValues();
     for (int i = 0; i < channelValues.size(); i++) {
         data.append(tr("%1\t%2\n").arg(i + 25).arg(channelValues[i]));
     }
+
+    data.append(tr("\n[StarSimulatorSettings]\n"));
+    data.append(tr("; #1: Magnitude\n"));
+    data.append(tr("; #2: Temperature\n"));
+    data.append(tr("; #3: Fiting Algorithm [0] LM, [1] GD\n"));
+    data.append(tr("%1\n").arg(ui->starMagnitude->text()));
+    data.append(tr("%1\n").arg(ui->starTemperature->text()));
+    data.append(tr("%1\n").arg(ui->gradientDescent->isChecked()));
 
     data.append(tr("\n[StarSimulatorData]\n"));
     data.append(tr("; #1: wavelength (nm)\n"));
@@ -1293,14 +1269,14 @@ void MainWindow::lsqNonLinSaveData()
     for (int i = 0; i < sms500->points(); i++) {
         if (masterData[i] < 0) {
             data.append(tr("%1\t%2\t%3\n")
-                       .arg(waveLength[i])
-                       .arg("0.000000000")
-                       .arg(starData[i][1]));
+                        .arg(waveLength[i])
+                        .arg("0.000000000")
+                        .arg(starData[i][1]));
         } else {
             data.append(tr("%1\t%2\t%3\n")
-                       .arg(waveLength[i])
-                       .arg(masterData[i] * transferenceFunction[i])
-                       .arg(starData[i][1]));
+                        .arg(waveLength[i])
+                        .arg(masterData[i] * transferenceFunction[i])
+                        .arg(starData[i][1]));
         }
     }
 
@@ -1320,6 +1296,31 @@ bool MainWindow::lsqNonLinLoadInitialSolution()
     // GUI update
     lsqNonLinInitialSolutionGuiUpdate(Utils::matrix2vector(initialSolution, 1));
     ui->x0UserDefined->setChecked(true);
+
+    // V2REF
+    QString v2ref = file.readSection(tr("[LedDriver]"));
+    if (v2ref.isEmpty() == false) {
+        if (v2ref.contains("on")) {
+            ui->setV2RefCheckBox->setChecked(true);
+        } else {
+            ui->setV2RefCheckBox->setChecked(false);
+        }
+    }
+
+    // Star Simulator Settings
+    QVector< QVector<double> > settings = file.data(tr("[StarSimulatorSettings]"));
+    if (settings.isEmpty() == false && settings.size() == 3) {
+        ui->starMagnitude->setText(tr("%1").arg(settings[0][0]));
+        ui->starTemperature->setText(tr("%1").arg(settings[1][0]));
+        if (settings[2][0] == 0) {
+            ui->levenbergMarquardt->setChecked(true);
+        } else {
+            ui->gradientDescent->setChecked(true);
+        }
+
+        // Update plot
+        lsqNonLinStarSettings();
+    }
 
     return true;
 }
@@ -1707,6 +1708,10 @@ void MainWindow::longTermStabilityStart()
             ui->smoothingSpinBox->value(),
             noiseReduction,
             ui->dynamicDarkCheckBox->isChecked(),
+            ui->setV2RefCheckBox->isChecked(),
+            ui->starMagnitude->text().toInt(),
+            ui->starTemperature->text().toInt(),
+            ui->gradientDescent->isChecked(),
             channelValues);
 
     longTermStabilityAlarmClock->setAlarmClock(hour, min, sec, secTimeInterval);
@@ -1866,13 +1871,16 @@ void MainWindow::aboutThisSoftware()
                           "Autonomous Star Tracker (AST).</p>"
                           "<p><b>Engineering:</b><br>"
                           "Marcos Eduardo Gomes Borges<br>"
-                          "mail: <a href='mailto:marcoseborges@gmail.com?Subject=About%20StarSimulator'>marcoseborges@gmail.com</a><br>"
-                          "web site: <a href='http://www.borges-solutions.com/'>www.borges-solutions.com</a></p>"
+                          "mail: <a href='mailto:marcosegborges@gmail.com?Subject=About%20StarSimulator'>marcosegborges@gmail.com</a></p>"
                           "<p><b>With special thanks to:</b><br>"
-                          "Braulio Fonseca Carneiro de Albuquerque</p>"
-                          "Copyright 2013 National Institute For Space Research (INPE).")
+                          "Braulio Fonseca Carneiro de Albuquerque<br>"
+                          "Enrico Spinetta<br>"
+                          "Marcio Afonso Arimura Fialho<br>"
+                          "Mario Luiz Selingardi</p>"
+                          "%3")
                        .arg(VER_FILEVERSION_STR)
-                       .arg(VER_BUILD_DATE_STR));
+                       .arg(VER_BUILD_DATE_STR)
+                       .arg(VER_LEGALCOPYRIGHT2_STR));
 }
 
 void MainWindow::aboutSMS500()
@@ -1892,68 +1900,6 @@ void MainWindow::aboutSMS500()
     dlg->setThirdCoefficient(QString::number(sms500->coefficient3()));
     dlg->setIntercept(QString::number(sms500->intercept()));
     dlg->exec();
-}
-
-
-// APAGAR APAGAR APAGAR
-template <class T>
-QVector< QVector<T> > MainWindow::loadData(const QString &title, const QString &filter, const QString &section)
-{
-    //    QString filePath = QFileDialog::getOpenFileName(this, title, QDir::currentPath(), filter);
-    //    MatrixXi matrix;
-
-    //    if (filePath.isEmpty()) {
-    //        return matrix; // size zero
-    //    }
-
-    //    QFile inFile(filePath);
-    //    inFile.open(QIODevice::ReadOnly);
-    //    QTextStream in(&inFile);
-    //    QString line;
-    //    QStringList fields;
-    //    bool headerOk     = false;
-    //    bool conversionOk = false;
-    //    int numberOfColumns;
-
-    //    // Find section
-    //    do {
-    //        line = in.readLine();
-    //        if (line.contains(section)) {
-    //            headerOk = true;
-    //        }
-    //    } while ((headerOk == false) && !in.atEnd());
-
-    //    if (headerOk == false) {
-    //        return matrix; // size zero
-    //    }
-
-    //    // Read data
-    //    while (!in.atEnd()) {
-    //        line   = in.readLine();
-
-    //        // Is a comment?
-    //        while (line.startsWith(';', Qt::CaseInsensitive) && !in.atEnd()) {
-    //            line = in.readLine();
-    //        }
-
-    //        // Is other section or end of file?
-    //        fields = line.split("\t");
-    //        if (fields.empty()) {
-    //            return matrix;
-    //        }
-
-    //        for (int i = 0; i < fields.length(); i++) {
-    //            matrix.resize();
-    //        }
-
-    //        fields.at(1).toInt(&conversionOk);
-    //        if (conversionOk == false) {
-    //            return false;
-    //        }
-
-    //        values(i) = fields.at(1).toInt();
-    //    }
-    //    inFile.close();
 }
 
 void MainWindow::operationModeChanged()
@@ -2426,6 +2372,7 @@ void MainWindow::sms500SignalAndSlot()
 
 void MainWindow::ledDriverSignalAndSlot()
 {
+    connect(ui->actionConfigureLEDDriverconnection, SIGNAL(triggered()), this, SLOT(ledDriverConfigureConnection()));
     connect(ledDriver, SIGNAL(warningMessage(QString,QString)),   this, SLOT(warningMessage(QString,QString)));
 
     connect(ledDriver, SIGNAL(performScan()),        this, SLOT(ledModelingPerformScan()));

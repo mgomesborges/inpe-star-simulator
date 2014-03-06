@@ -105,6 +105,8 @@ QVector< QVector<double> > FileHandle::data(const QString &section, bool *ok)
         QString line;
         int lineNumber = 0;
 
+        matrix.clear();
+
         // Prevents errors in case of "ok" not to be passed as argument
         if (ok == 0) {
             ok = new bool;
@@ -112,6 +114,7 @@ QVector< QVector<double> > FileHandle::data(const QString &section, bool *ok)
 
         // Find section
         *ok = false;
+        in.seek(0);
         do {
             line = in.readLine();
             lineNumber++;
@@ -138,7 +141,7 @@ QVector< QVector<double> > FileHandle::data(const QString &section, bool *ok)
             }
 
             // Is other section or line without data?
-            if (line.count() <= 2) {
+            if (line.count() == 0) {
                 if (matrix.isEmpty()) {
                     QMessageBox::warning(0, caption, tr("Data not found.\t"));
                 }
@@ -180,6 +183,7 @@ QString FileHandle::readSection(const QString &section, bool *ok)
 
         // Find section
         *ok = false;
+        in.seek(0);
         do {
             line = in.readLine();
 
@@ -199,8 +203,8 @@ QString FileHandle::readSection(const QString &section, bool *ok)
         while (!in.atEnd()) {
             line   = in.readLine();
 
-            // Is other section or line without data?
-            if (line.count() <= 2) {
+            // Is other section?
+            if (line.contains(QRegExp("^\\[[A-Za-z0-9-_.]+\\]$"))) {
                 if (data.isEmpty()) {
                     QMessageBox::warning(0, caption, tr("Data not found.\t"));
                 }

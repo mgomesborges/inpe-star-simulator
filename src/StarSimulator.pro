@@ -25,7 +25,8 @@ SOURCES += main.cpp\
     longtermstabilityalarmclock.cpp \
     star.cpp \
     filehandle.cpp \
-    utils.cpp
+    utils.cpp \
+    ftdidevicechooserdialog.cpp
 
 HEADERS  += mainwindow.h \
     aboutsmsdialog.h \
@@ -43,12 +44,14 @@ HEADERS  += mainwindow.h \
     star.h \
     version.h \
     filehandle.h \
-    utils.h
+    utils.h \
+    ftdidevicechooserdialog.h
 
 FORMS    += mainwindow.ui \
     aboutsmsdialog.ui \
     lsqloadleddatadialog.ui \
-    longtermstabilityexportdialog.ui
+    longtermstabilityexportdialog.ui \
+    ftdidevicechooserdialog.ui
 
 RESOURCES += \
     Pics.qrc

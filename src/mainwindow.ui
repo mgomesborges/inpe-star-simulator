@@ -284,8 +284,8 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>196</width>
-               <height>386</height>
+               <width>220</width>
+               <height>396</height>
               </rect>
              </property>
              <attribute name="label">
@@ -7235,6 +7235,8 @@ Database</string>
     <property name="title">
      <string>&amp;Star Simulator Settings</string>
     </property>
+    <addaction name="actionConfigureLEDDriverconnection"/>
+    <addaction name="separator"/>
     <addaction name="actionLoadInitialSolution"/>
     <addaction name="actionLoadTransferenceFunction"/>
    </widget>
@@ -7289,6 +7291,11 @@ Database</string>
   <action name="actionLoadInitialSolution">
    <property name="text">
     <string>Load &amp;initial solution</string>
+   </property>
+  </action>
+  <action name="actionConfigureLEDDriverconnection">
+   <property name="text">
+    <string>Configure LED Driver connection</string>
    </property>
   </action>
  </widget>

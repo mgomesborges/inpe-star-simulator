@@ -19,11 +19,18 @@ void LedDriver::stop()
 
 bool LedDriver::openConnection()
 {
-    if (FT_Open(0, &ftHandle) == FT_OK) {
+    FTDIDeviceChooserDialog ftdiDevice;
+    int iDevice = ftdiDevice.defaultConnection();
 
-        FT_SetTimeouts(ftHandle, 1000, 1000);
-        if (configureVoltageRef() == true) {
-            connected = true;
+    if (iDevice >= 0) {
+        if (FT_Open(iDevice, &ftHandle) == FT_OK) {
+
+            FT_SetTimeouts(ftHandle, 1000, 1000);
+            if (configureVoltageRef() == true) {
+                connected = true;
+            } else {
+                connected = false;
+            }
         } else {
             connected = false;
         }

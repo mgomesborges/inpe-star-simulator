@@ -24,6 +24,7 @@
 #include "longtermstability.h"
 #include "longtermstabilityalarmclock.h"
 #include "longtermstabilityexportdialog.h"
+#include "ftdidevicechooserdialog.h"
 
 #include "version.h"
 
@@ -88,8 +89,6 @@ private:
     Plot *plotLTS;
     int longTermStabilityScanNumber;
 
-    template <class T> QVector< QVector<T> > loadData(const QString &title, const QString &filter, const QString &section);
-
 private slots:
     void statusBarMessage(QString message);
     void warningMessage(const QString &caption, const QString &message);
@@ -118,6 +117,7 @@ private slots:
     void sms500SaveScanData(const QString &filePath = QString());
     QString sms500MainData();
 
+    void ledDriverConfigureConnection();
     bool ledDriverConnect();
     void ledDriverDisconnect();
     void ledDriverConnectDisconnect();

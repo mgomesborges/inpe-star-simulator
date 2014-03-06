@@ -8,6 +8,8 @@
 #include <Windows.h>
 #include "ftd2xx.h"
 
+#include "ftdidevicechooserdialog.h"
+
 class LedDriver : public QThread
 {
     Q_OBJECT

@@ -29,8 +29,7 @@ public:
     void stop();
     bool status();
 
-    bool saveSMS500andLedDriverParameters(
-            int id,
+    bool saveSMS500andLedDriverParameters(int id,
             int startWavelength,
             int stopWavelength,
             int integrationTime,
@@ -38,6 +37,10 @@ public:
             int boxcarSmoothing,
             int noiseReduction,
             bool dynamicDark,
+            bool v2ref,
+            int star_magnitude,
+            int star_temperature,
+            int fiting_algorithm,
             const QVector<int> &channelValue);
 
     bool saveScanData(int id,
