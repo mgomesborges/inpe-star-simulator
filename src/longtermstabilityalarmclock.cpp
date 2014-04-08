@@ -19,13 +19,26 @@ void LongTermStabilityAlarmClock::stop()
 
 void LongTermStabilityAlarmClock::run()
 {
-    stopThread = false;
+    stopThread  = false;
+    timeoutFlag = false;
     for (int i = 0; i < numberOfTimesToRun; i++) {
         msleep(timeInterval * 1000); // msleep more precise than sleep()
         emit timeout();
+        timeoutFlag = true;
         if (stopThread == true) {
             break;
         }
     }
     emit finished();
+}
+
+
+void LongTermStabilityAlarmClock::clearTimeout()
+{
+    timeoutFlag = false;
+}
+
+bool LongTermStabilityAlarmClock::isTimeout()
+{
+    return timeoutFlag;
 }

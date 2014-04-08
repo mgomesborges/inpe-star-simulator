@@ -97,12 +97,12 @@ int FTDIDeviceChooserDialog::numberOfDevices()
     return numDevs;
 }
 
-int FTDIDeviceChooserDialog::defaultConnection()
+int FTDIDeviceChooserDialog::defaultConnection(bool enableChooseDevice)
 {
     deviceInfoList();
 
     if (numDevs == 0) {
-        return -1; // Error: withouth device
+        return -1; // Error: without device
     }
 
     iDevice = -1; // Initial condition
@@ -129,7 +129,7 @@ int FTDIDeviceChooserDialog::defaultConnection()
         }
     }
 
-    if ( iDevice == -1) {
+    if (enableChooseDevice == true && iDevice == -1) {
         this->exec();
     }
 

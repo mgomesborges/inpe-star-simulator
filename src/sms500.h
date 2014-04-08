@@ -2,7 +2,6 @@
 #define SMS500_H
 
 #include <QThread>
-#include <QPolygon>
 #include "SpecData.h"
 
 class SMS500 : public QThread
@@ -10,15 +9,20 @@ class SMS500 : public QThread
     Q_OBJECT
 
 public:
+    typedef enum modeType {
+        Flux = 0,
+        Intensity,
+        lux,
+        cd_m2
+    } operationMode;
+
     explicit SMS500(QObject *parent = 0, int smsChannel = 0);
     ~SMS500();
 
     void stop();
-
-    void setOperationMode(const QString &mode);
-    void setCalibratedDataPath(const QString &path);
+    void setOperationMode(operationMode mode);
     void setAutoRange(bool enable);
-    void setRange(int range);
+    void setRange(int rangeIndex);
     void setBoxCarSmoothing(short value);
     void setAverage(short average);
     void setStartWave(int wave);
@@ -26,12 +30,13 @@ public:
     void setCorrecDarkCurrent(bool enable);
     void setNoiseReduction(bool enable, double factor);
     void setNumberOfScans(int value);
-    int  startWavelength();
-    int  stopWavelength();
-    int  dominanteWavelength();
-    int  peakWavelength();
-    int  fwhm();
-    int  points();
+    void resetScanNumber();
+    int startWavelength();
+    int stopWavelength();
+    int dominanteWavelength();
+    int peakWavelength();
+    int fwhm();
+    int points();
     double power();
     double integrationTime();
     double samplesToAverage();
@@ -57,7 +62,7 @@ public:
     bool openConnection();
     void closeConnection();
     bool isConnected();
-    bool isNeedAutoScan();
+    bool isNeedAutoRange();
     int  performAutoRange();
     void enableNextScan();
     void setWaitTimeForScan(unsigned long milliseconds);
@@ -67,12 +72,10 @@ private:
     void run();
 
 signals:
-    void scanPerformed(QPolygonF points, int peakWavelength, double amplitude,
-                       int scanNumber, int integrationTimeIndex, bool satured);
+    void scanPerformed(int scanNumber);
     void scanFinished();
-    void info(QString message);
-
-public slots:
+    void saturedData(bool satured);
+    void integrationTimeChanged(int integrationTimeIndex);
 
 private:
     SPECTROMETER spectrometer;
@@ -82,7 +85,6 @@ private:
     bool enableNoiseReduction;
     bool enabledScan;
     bool enabledNextScan;
-    bool satured;
     bool autoRange;
     int numberOfScans;
     int scanNumber;

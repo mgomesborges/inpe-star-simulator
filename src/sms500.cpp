@@ -21,10 +21,7 @@ SMS500::~SMS500()
 
 void SMS500::run()
 {
-    double amplitude;
-    int peakWavelength;
-    int integrationTimeIndex = 0;
-    bool needAutoScan = true;
+    SPECTROMETER currentSpectrometer;
 
     ReadSpecDataFile(calibratedDataPath.toUtf8().data());
 
@@ -38,40 +35,21 @@ void SMS500::run()
             millisecondsSleep = 0;
         }
 
+        // Update spectrometer parameters
+        currentSpectrometer = spectrometer;
+
         scanNumber++;
 
         EnableNoiseReduction(enableNoiseReduction, noiseReductionFator);
+        GetSpectralData(&currentSpectrometer, &resultData, 0);
 
-        if ((autoRange == true) && (needAutoScan == true)) {
-            integrationTimeIndex = performAutoRange();
-            setRange(integrationTimeIndex);
-            GetSpectralData(&spectrometer, &resultData, 0);
-        } else {
-            GetSpectralData(&spectrometer, &resultData, 0);
+        if ((isNeedAutoRange() == true) && (autoRange == true)) {
+            performAutoRange();
         }
 
-        amplitude      = -1000;
-        peakWavelength = 0;
-
-        QPolygonF points;
-
-        for(int i = 0; i < resultData.Points; i++) {
-            if (amplitude < resultData.MasterData[i]) {
-                amplitude      = resultData.MasterData[i];
-                peakWavelength = resultData.WaveLength[i];
-            }
-
-            if (resultData.MasterData[i] < 0) {
-                points << QPointF(resultData.WaveLength[i], 0);
-            } else {
-                points << QPointF(resultData.WaveLength[i], resultData.MasterData[i]);
-            }
-        }
-
-        needAutoScan    = isNeedAutoScan();
         enabledNextScan = false;
 
-        emit scanPerformed(points, peakWavelength, amplitude, scanNumber, integrationTimeIndex, satured);
+        emit scanPerformed(scanNumber);
 
         // Waiting for SMS500 be ready for next scan
         while ((enabledScan == true) && (enabledNextScan == false)) {
@@ -79,43 +57,56 @@ void SMS500::run()
         }
 
         if ((numberOfScans != -1) && (scanNumber >= numberOfScans)) {
-            sleepSingleShot   = false;
-            millisecondsSleep = 0;
             break;
         }
     }
+
+    // Reset Sleep
+    sleepSingleShot   = false;
+    millisecondsSleep = 0;
 
     emit scanFinished();
 }
 
 void SMS500::stop()
 {
-    enabledScan       = false;
-    sleepSingleShot   = false;
-    millisecondsSleep = 0;
+    enabledScan = false;
 }
 
-void SMS500::setOperationMode(const QString &mode)
+void SMS500::setOperationMode(operationMode mode)
 {
-    spectrometer.Channel[channel].pchModeType = mode.toUtf8().data();
-}
-
-void SMS500::setCalibratedDataPath(const QString &path)
-{
-    calibratedDataPath = path;
+    switch (mode) {
+        case Flux:
+            spectrometer.Channel[channel].pchModeType = QString("Flux").toUtf8().data();
+            calibratedDataPath = "Flux.dat";
+            break;
+        case Intensity:
+            spectrometer.Channel[channel].pchModeType = QString("Intensity").toUtf8().data();
+            calibratedDataPath = "Irradiance.dat";
+            break;
+        case lux:
+            spectrometer.Channel[channel].pchModeType = QString("lux").toUtf8().data();
+            calibratedDataPath = "Irradiance.dat";
+            break;
+        case cd_m2:
+            spectrometer.Channel[channel].pchModeType = QString("cd/m2").toUtf8().data();
+            calibratedDataPath = "Radiance.dat";
+            break;
+    }
 }
 
 void SMS500::setAutoRange(bool enable)
 {
-    // Do not use the SMS500 Autorange function, but uses the own implemented autorange
+    // This class don't use the SMS500 Autorange function, but uses the own implemented autorange
     spectrometer.Channel[channel].AutoRang = false;
     autoRange = enable;
 }
 
-void SMS500::setRange(int range)
+void SMS500::setRange(int rangeIndex)
 {
-    spectrometer.Channel[channel].Range = range;
-    spectrometer.Channel[channel].IntTime = INTEGRATION_TIME[range];
+    spectrometer.Channel[channel].Range = rangeIndex;
+    spectrometer.Channel[channel].IntTime = INTEGRATION_TIME[rangeIndex];
+    emit integrationTimeChanged(rangeIndex);
 }
 
 void SMS500::setBoxCarSmoothing(short value)
@@ -154,6 +145,11 @@ void SMS500::setNumberOfScans(int value)
     numberOfScans = value;
 }
 
+void SMS500::resetScanNumber()
+{
+    scanNumber = 0;
+}
+
 int SMS500::startWavelength()
 {
     return resultData.Start;
@@ -189,15 +185,7 @@ double SMS500::maxIntensity()
 
 double SMS500::maxMasterData()
 {
-    double max = 0;
-
-    for (int i = 0; i < resultData.Points; i++) {
-        if (max < resultData.MasterData[i]) {
-            max = resultData.MasterData[i];
-        }
-    }
-
-    return max;
+    return resultData.MasterData[resultData.Peakwave - resultData.Start];
 }
 
 int SMS500::fwhm()
@@ -334,14 +322,14 @@ bool SMS500::isConnected()
     return false;
 }
 
-bool SMS500::isNeedAutoScan()
+bool SMS500::isNeedAutoRange()
 {
     double max = maxIntensity();
 
     if (max > spectrometer.Channel[channel].SetMaxCounts) {
-        satured = true;
+        emit saturedData(true);
     } else {
-        satured = false;
+        emit saturedData(false);
     }
 
     if (((max > spectrometer.Channel[channel].SetMaxCounts) && (spectrometer.Channel[channel].IntTime != 1.1)) ||
@@ -354,63 +342,47 @@ bool SMS500::isNeedAutoScan()
 
 int SMS500::performAutoRange()
 {
-    emit info(tr("SMS-500: searching for best integration time value."));
+    SPECTROMETER currentSpectrometer = spectrometer;
 
-    short average           = spectrometer.Channel[channel].Aveg;
-    short boxCarSmoothing   = spectrometer.Channel[channel].BoxCar;
-    bool correctDarkCurrent = spectrometer.Channel[channel].CorrDark;
-    bool noiseReduction     = enableNoiseReduction;
+    currentSpectrometer.Channel[channel].Aveg = 1;
+    currentSpectrometer.Channel[channel].BoxCar = 1;
+    currentSpectrometer.Channel[channel].CorrDark = false;
 
+    EnableNoiseReduction(false, 0.0);
 
-    // Set Parameters
-    spectrometer.Channel[channel].Aveg = 1;
-    spectrometer.Channel[channel].BoxCar = 0;
-    spectrometer.Channel[channel].CorrDark = false;
-    enableNoiseReduction = false;
-
-    // Performs first scan
-    if (scanNumber <= 1) {
-        GetSpectralData( &spectrometer, &resultData, 0);
-    }
-
-    double max = maxIntensity();
-    int range  = spectrometer.Channel[channel].Range;
+    int rangeIndex = currentSpectrometer.Channel[channel].Range;
 
     // If Satured
-    if (max > spectrometer.Channel[channel].SetMaxCounts) {
-        for (; range > 0; --range) {
-            setRange( range );
-            GetSpectralData( &spectrometer, &resultData, 0);
+    if (maxIntensity() > currentSpectrometer.Channel[channel].SetMaxCounts) {
+        for (; rangeIndex > 0; --rangeIndex) {
+            currentSpectrometer.Channel[channel].Range = rangeIndex;
+            currentSpectrometer.Channel[channel].IntTime = INTEGRATION_TIME[rangeIndex];
 
-            max = maxIntensity();
+            GetSpectralData(&currentSpectrometer, &resultData, 0);
 
-            if (max < spectrometer.Channel[channel].SetMaxCounts) {
+            if (maxIntensity() < currentSpectrometer.Channel[channel].SetMaxCounts) {
                 break;
             }
         }
     } else { // If Not Satured
-        for (; range < MAX_RANGES; ++range) {
-            setRange( range );
-            GetSpectralData( &spectrometer, &resultData, 0);
+        for (; rangeIndex < MAX_RANGES; ++rangeIndex) {
+            currentSpectrometer.Channel[channel].Range = rangeIndex;
+            currentSpectrometer.Channel[channel].IntTime = INTEGRATION_TIME[rangeIndex];
 
-            max = maxIntensity();
+            GetSpectralData(&currentSpectrometer, &resultData, 0);
 
-            if (max > spectrometer.Channel[channel].SetMaxCounts) {
+            if (maxIntensity() > currentSpectrometer.Channel[channel].SetMaxCounts) {
                 break;
             }
         }
-        range -= 1;
+        rangeIndex--;
     }
 
-    // Reset Parameters
-    spectrometer.Channel[channel].Aveg = average;
-    spectrometer.Channel[channel].BoxCar = boxCarSmoothing;
-    spectrometer.Channel[channel].CorrDark = correctDarkCurrent;
-    enableNoiseReduction = noiseReduction;
-
-    emit info(tr(""));
-
-    return range;
+    setRange(rangeIndex);
+    currentSpectrometer = spectrometer;
+    EnableNoiseReduction(enableNoiseReduction, noiseReductionFator);
+    GetSpectralData(&currentSpectrometer, &resultData, 0);
+    return rangeIndex;
 }
 
 void SMS500::enableNextScan()

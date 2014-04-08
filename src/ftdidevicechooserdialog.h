@@ -22,7 +22,7 @@ public:
 
     QString deviceName(ulong type);
     int numberOfDevices();
-    int defaultConnection();
+    int defaultConnection(bool enableChooseDevice = true);
 
 public slots:
     void deviceInfoList();

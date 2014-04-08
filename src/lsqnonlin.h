@@ -40,6 +40,7 @@ signals:
     void ledDataNotFound();
     void info(QString message);
     void performScan();
+    void performScanWithUpdate();
     void finished();
 
 public slots:
@@ -63,6 +64,7 @@ private:
     Matrix< MatrixXd, 1, 72> derivatives3DMatrix;
 
     void run();
+    double media(int qty);
 };
 
 #endif // LSQNONLIN_H

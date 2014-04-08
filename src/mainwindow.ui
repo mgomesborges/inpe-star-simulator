@@ -284,8 +284,8 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>220</width>
-               <height>396</height>
+               <width>196</width>
+               <height>386</height>
               </rect>
              </property>
              <attribute name="label">
@@ -614,7 +614,7 @@
               </item>
              </layout>
             </widget>
-            <widget class="QWidget" name="modesOfOperation">
+            <widget class="QWidget" name="operationMode">
              <property name="geometry">
               <rect>
                <x>0</x>
@@ -7221,8 +7221,8 @@ Database</string>
     <property name="title">
      <string>SMS500 &amp;Calibration</string>
     </property>
-    <addaction name="actionSystemZero"/>
-    <addaction name="actionCalibrateSystem"/>
+    <addaction name="actionSMS500SystemZero"/>
+    <addaction name="actionSMS500CalibrateSystem"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -7245,14 +7245,20 @@ Database</string>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
-  <action name="actionCalibrateSystem">
+  <action name="actionSMS500CalibrateSystem">
    <property name="text">
     <string>&amp;Calibrate System</string>
    </property>
+   <property name="toolTip">
+    <string>SMS500 Calibrate System</string>
+   </property>
   </action>
-  <action name="actionSystemZero">
+  <action name="actionSMS500SystemZero">
    <property name="text">
     <string>System Zero (DarkRatioArray.dat)</string>
+   </property>
+   <property name="toolTip">
+    <string>SMS500 System Zero (DarkRatioArray.dat)</string>
    </property>
   </action>
   <action name="actionAboutSMS500">

@@ -33,8 +33,7 @@ public:
 signals:
     void warningMessage(QString title, QString message);
     void performScan();
-    void saveData(QString fileName);
-    void saveAllData(QString atualChannel);
+    void saveData(QString currentChannel);
     void modelingFinished();
     void info(QString message);
 
@@ -43,16 +42,17 @@ public slots:
     bool openConnection();
     void closeConnection();
     bool isConnected();
-    void enabledModelingContinue();
-    bool writeData(const char *txBuffer);
+    bool writeData(int dac, int port, int value);
     bool resetDACs();
-    bool configureVoltageRef();
-    bool setV2Ref(bool checked);
+    bool configureVoltage();
+    void setV2Ref(bool enable);
+    void enabledModelingContinue();
+    bool ftdiCyclePort();
 
 private:
     void run();
+    bool readyToContinue();
 
-    FT_STATUS ftStatus;
     FT_HANDLE ftHandle;
     bool connected;
     bool v2ref;

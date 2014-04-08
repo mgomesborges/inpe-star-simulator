@@ -23,35 +23,31 @@ bool LedDriver::openConnection()
     int iDevice = ftdiDevice.defaultConnection();
 
     if (iDevice >= 0) {
-        if (FT_Open(iDevice, &ftHandle) == FT_OK) {
-
-            FT_SetTimeouts(ftHandle, 1000, 1000);
-            if (configureVoltageRef() == true) {
+        for (int i = 0; i < 5; i++) {
+            if (FT_Open(iDevice, &ftHandle) == FT_OK) {
+                FT_SetTimeouts(ftHandle, 1000, 1000);
                 connected = true;
-            } else {
-                connected = false;
+                if (configureVoltage() == false) {
+                    closeConnection();
+                }
+                return connected;
             }
-        } else {
-            connected = false;
+            msleep(1000);
         }
-    } else {
-        connected = false;
     }
 
-    return connected;
+    connected = false;
+    return false;
 }
 
 void LedDriver::closeConnection()
 {
-    wait(1000);
-
     if (isConnected() == true) {
         resetDACs();
     }
 
-    FT_Close(ftHandle);
-
     connected = false;
+    FT_Close(ftHandle);
 }
 
 bool LedDriver::isConnected()
@@ -59,99 +55,64 @@ bool LedDriver::isConnected()
     return connected;
 }
 
-void LedDriver::enabledModelingContinue()
+bool LedDriver::writeData(int dac, int port, int value)
 {
-    enabledContinue = true;
-}
+    if (connected == true) {
+        DWORD bytesWritten;
+        char txBuffer[9];
 
-bool LedDriver::writeData(const char *txBuffer)
-{
-    DWORD bytesWritten;
-    char dataToConstChar;
-    QTime timer;
+        txBuffer[0] = 0x0C;
+        txBuffer[1] = 0x40 |  (value & 0x0000000F);
+        txBuffer[2] = 0x80 | ((value & 0x000000F0) >> 4);
+        txBuffer[3] = 0x0D;
+        txBuffer[4] = 0x40 | ((value & 0x00000F00) >> 8);
+        txBuffer[5] = 0x80 | port;
+        txBuffer[6] =  dac;
+        txBuffer[7] = 0x40;
+        txBuffer[8] = 0x80;
 
-    int length = QString( txBuffer ).length();
+        for (int i = 0; i < 9; i++) {
+            for (int attempts = 0; attempts < 3; attempts++) {
+                if (FT_Write(ftHandle, &txBuffer[i], 1, &bytesWritten) == FT_OK && bytesWritten == 1) {
+                    break; // Ok, next information
+                }
 
-    for (int i = 0; i < length; i++) {
-        dataToConstChar = txBuffer[i];
-
-        timer.restart();
-        ftStatus = FT_Write(ftHandle, &dataToConstChar, 1, &bytesWritten);
-
-        // Checks if timeout has occurred
-        if (timer.elapsed() >= 1000) {
-            ftStatus = FT_ResetDevice(ftHandle); // Reset FTDI
-
-            if (ftStatus == FT_OK) { // If Reset Ok, Sets Timeouts and Writes Data again
-                FT_SetTimeouts(ftHandle, 1000, 1000);
-                ftStatus = FT_Write(ftHandle, &dataToConstChar, 1, &bytesWritten);
-            }
-            else {
-                emit warningMessage(tr("LED Driver Error"), tr("Reset Device Error.\nCheck USB connection and try again!"));
-                return false;
+                if (FT_ResetDevice(ftHandle) == FT_OK) {
+                    FT_SetTimeouts(ftHandle, 1000, 1000);
+                } else {
+                    return false;
+                }
             }
         }
 
-        if ((ftStatus != FT_OK) || (bytesWritten != 1)) {
-            return false;
-        }
+        return true;
     }
 
-    return true;
+    return false;
 }
 
 bool LedDriver::resetDACs()
 {
-    char txBuffer[10];
-
     // RESET DAC0 to DAC11
     for (int dac = 0; dac < 12; dac++) {
-        txBuffer[0] = 0x0C;
-        txBuffer[1] = 0x40;
-        txBuffer[2] = 0x80;
-        txBuffer[3] = 0x0D;
-        txBuffer[4] = 0x40;
-        txBuffer[5] = 0x8F;
-        txBuffer[6] =  dac;
-        txBuffer[7] = 0x40;
-        txBuffer[8] = 0x80;
-        txBuffer[9] = '\0';
-
-        if (writeData(txBuffer) == false) {
+        if (writeData(dac, 0xF, 0) == false) {
             return false;
         }
     }
 
-    if (configureVoltageRef() == false) {
-        return false;
-    }
-
-    return true;
+    return configureVoltage();
 }
 
-bool LedDriver::configureVoltageRef()
+bool LedDriver::configureVoltage()
 {
-    int vref;
-    if (v2ref == true) {
-        vref = 0x83;
-    } else {
-        vref = 0x80;
+    int vref = 0x30; // v2ref ON
+
+    if (v2ref == false) {
+        vref = 0x00; // v2ref OFF
     }
 
-    char txBuffer[10];
     for (int dac = 0; dac < 12; dac++) {
-        txBuffer[0] = 0x0C;
-        txBuffer[1] = 0x40;
-        txBuffer[2] = vref;
-        txBuffer[3] = 0x0D;
-        txBuffer[4] = 0x40;
-        txBuffer[5] = 0x88;
-        txBuffer[6] =  dac;
-        txBuffer[7] = 0x40;
-        txBuffer[8] = 0x80;
-        txBuffer[9] = '\0';
-
-        if (writeData(txBuffer) == false) {
+        if (writeData(dac, 0x8, vref) == false) {
             return false;
         }
     }
@@ -159,15 +120,10 @@ bool LedDriver::configureVoltageRef()
     return true;
 }
 
-bool LedDriver::setV2Ref(bool checked)
+void LedDriver::setV2Ref(bool enable)
 {
-    v2ref = checked;
-
-    if (configureVoltageRef() == false) {
-        return false;
-    }
-
-    return true;
+    v2ref = enable;
+    configureVoltage();
 }
 
 void LedDriver::setModelingParameters(int startChannelValue, int endChannelValue, int levelUpdateType, int incrementDecrementValue)
@@ -176,6 +132,34 @@ void LedDriver::setModelingParameters(int startChannelValue, int endChannelValue
     endChannel   = endChannelValue;
     updateType   = levelUpdateType;
     incDecValue  = incrementDecrementValue;
+}
+
+void LedDriver::enabledModelingContinue()
+{
+    enabledContinue = true;
+}
+
+/**
+ * @brief The effect of this function is the same as disconnecting then reconnecting the device from USB.
+ * @return True if Cycle Port is performed, otherwise return false.
+ */
+bool LedDriver::ftdiCyclePort()
+{
+    FTDIDeviceChooserDialog ftdiDevice;
+
+    for (int attempts = 0; attempts < 10; attempts++) {
+        if (FT_CyclePort(ftHandle) == FT_OK) {
+            for (attempts = 0; attempts < 30; attempts++) {
+                msleep(2000);
+                if (ftdiDevice.defaultConnection(false) != -1) {
+                    return openConnection();
+                }
+            }
+            return false;
+        }
+        msleep(500);
+    }
+    return false;
 }
 
 void LedDriver::modelingNextChannel()
@@ -190,8 +174,6 @@ QVector<int> LedDriver::digitalLevelIndex()
 
 void LedDriver::run()
 {
-    char txBuffer[10];
-    DWORD bytesWritten;
     QTime timer;
     int dac;
     int port;
@@ -199,8 +181,7 @@ void LedDriver::run()
     enabledModeling = true;
     nextChannel     = false;
 
-    for (int channel = startChannel; channel <= endChannel; channel++) {
-
+    for (int channel = startChannel; channel <= endChannel && enabledModeling == true; channel++) {
         resetDACs();
 
         // Setup Increment or Decrement level
@@ -213,6 +194,8 @@ void LedDriver::run()
         levelIndex.clear();
 
         for (int counter = 0; counter < 4096; counter++) {
+            emit info(tr("[Channel %1, Digital Level %2]").arg(channel).arg(level));
+
             levelIndex.append(level);
 
             // Find the value of DAC
@@ -225,83 +208,31 @@ void LedDriver::run()
             // Find the value of Port
             port = channel - (dac * 8) - 1;
 
-            // LED Driver configure: set DAC and Port value
-            txBuffer[0] = 0x0C;
-            txBuffer[1] = 0x40 |  (level & 0x0000000F);
-            txBuffer[2] = 0x80 | ((level & 0x000000F0) >> 4);
-            txBuffer[3] = 0x0D;
-            txBuffer[4] = 0x40 | ((level & 0x00000F00) >> 8);
-            txBuffer[5] = 0x80 | port;
-            txBuffer[6] = dac;
-            txBuffer[7] = 0x40;
-            txBuffer[8] = 0x80;
-            txBuffer[9] = '\0';
-
-            // Writes Data
-            for (int i = 0; i < 9; i++) {
-                timer.restart();
-
-                ftStatus = FT_Write(ftHandle, &txBuffer[i], 1, &bytesWritten);
-
-                // Checks if timeout has occurred
-                if (timer.elapsed() >= 1000) {
-                    ftStatus = FT_ResetDevice(ftHandle); // Reset FTDI
-
-                    if (ftStatus == FT_OK) { // If Reset Ok, Sets Timeouts and Writes Data again
-                        FT_SetTimeouts(ftHandle, 1000, 1000);
-                        ftStatus = FT_Write(ftHandle, &txBuffer[i], 1, &bytesWritten);
-                    }
-                    else {
-                        emit warningMessage(tr("LED Driver Error"), tr("Reset Device Error.\nCheck USB connection and try again!"));
-                        emit modelingFinished();
-                        return;
-                    }
-                }
-
-                if ((ftStatus != FT_OK) || (bytesWritten != 1)) {
-                    emit warningMessage(tr("LED Driver Error"), tr("Writes Data Error.\nCheck USB connection and try again!"));
-                    emit modelingFinished();
-                    return;
-                }
+            if (writeData(dac, port, level) == false) {
+                emit warningMessage(tr("LED Driver Error"), tr("Writes Data Error.\nCheck USB connection and try again!"));
+                emit modelingFinished();
+                resetDACs();
+                return;
             }
 
             // Performs Scan with SMS500
             enabledContinue = false;
-
             emit performScan();
+            timer.start();
 
-            // Waiting for SMS500 be ready for next scan
-            timer.restart();
-            while ((enabledModeling == true) && (enabledContinue == false)) {
+            while (enabledContinue == false) {
+                msleep(1); // wait 1ms for continue, see Qt Thread's Documentation
                 if (timer.elapsed() >= 600000) {
-                    emit warningMessage(tr("LED Driver Error"), tr("Wait Time Exceeded.\nWainting for SMS500 be read for next Scan."));
+                    emit warningMessage(tr("LED Driver Error"), tr("Wait time to SMS500 perform scan or save data exceeded."));
                     emit modelingFinished();
-                    stop();
+                    resetDACs();
                     return;
                 }
-            }
-
-            emit info(tr("[Channel %1, Digital Level %2]").arg(channel).arg(level));
-
-            // Save Data in .txt format
-            enabledContinue = false;
-            emit saveData(tr("/ch%1_DigitalLevel_%2.txt").arg(channel).arg(level));
-
-            // Waiting Save Data
-            timer.restart();
-            while ((enabledModeling == true) && (enabledContinue == false)) {
-                if (timer.elapsed() >= 300000) {
-                    emit warningMessage(tr("LED Driver Error"), tr("Wait Time Exceeded.\nWaiting for Save Data"));
+                if (enabledModeling == false) {
                     emit modelingFinished();
-                    stop();
+                    resetDACs();
                     return;
                 }
-            }
-
-            // Ends LED Modeling
-            if( (enabledModeling == false) || (connected == false)) {
-                emit modelingFinished();
-                return;
             }
 
             if (nextChannel == true) {
@@ -323,35 +254,15 @@ void LedDriver::run()
             }
         }
 
-        emit saveAllData(QString::number(channel));
+        emit saveData(QString::number(channel));
 
         // Cycle Port
-        // The effect of this function is the same as disconnecting then reconnecting the device from USB.
-        ftStatus = FT_CyclePort(ftHandle);
-        if (ftStatus != FT_OK) {
-            // Try again
-            ftStatus = FT_CyclePort(ftHandle);
-            if (ftStatus != FT_OK) {
-                emit warningMessage(tr("LED Driver Error :: Cycle Port"), tr("Cycle Port Error."));
-                emit modelingFinished();
-                return;
-            }
+        if (ftdiCyclePort() == false) {
+            emit warningMessage(tr("LED Driver Error :: Cycle Port"), tr("Reset Device Error.\nCheck USB connection and try again!"));
+            break;
         }
-
-        // Waites FTDI ready
-        sleep(20);
-
-        if (FT_Open(0, &ftHandle) != FT_OK) {
-            // Try again
-            if (FT_Open(0, &ftHandle) != FT_OK) {
-                emit warningMessage(tr("LED Driver Error :: Cycle Port"), tr("Reset Device Error.\nCheck USB connection and try again!"));
-                emit modelingFinished();
-                return;
-            }
-        }
-
-        FT_SetTimeouts(ftHandle, 1000, 1000);
     }
 
     emit modelingFinished();
+    resetDACs();
 }

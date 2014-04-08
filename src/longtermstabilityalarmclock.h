@@ -17,12 +17,15 @@ signals:
 
 public slots:
     void stop();
+    void clearTimeout();
+    bool isTimeout();
 
 private:
     void run();
 
     int timeInterval;
     int numberOfTimesToRun;
+    bool timeoutFlag;
     bool stopThread;
 };
 
