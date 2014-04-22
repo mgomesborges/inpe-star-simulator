@@ -337,7 +337,7 @@ void MainWindow::sms500ScanDataHandle(int scanNumber)
         pointsWithCorrection << QPointF(wavelength[i], masterData[i] * transferenceFunction[i]);
     }
 
-    if (ledDriver->isRunning() == false && lsqnonlin->isRunning() == false) {
+    if (!(ledDriver->isRunning() || lsqnonlin->isRunning())) {
         sms500->enableNextScan();
     }
 
@@ -352,12 +352,8 @@ void MainWindow::sms500ScanDataHandle(int scanNumber)
     plotLSqNonLin->showPeak(peakWavelength, amplitude);
     plotLSqNonLin->showData(pointsWithCorrection, lsqNonLinStar->peak() * 1.2);
 
-    // Updates irradiance labels
     outputIrradiance = trapezoidalNumInteg(pointsWithCorrection);
-    starIrradiance   = trapezoidalNumInteg(lsqNonLinStar->spectralDataToPlot());
-
     ui->outputIrradianceLabel->setText(QString::number(outputIrradiance, 'e', 2));
-    ui->starIrradianceLabel->setText(QString::number(starIrradiance, 'e', 2));
 
     ui->scanNumberLabel->setText(tr("    Scan number: %1").arg(scanNumber));
     ui->scanNumberLabel_2->setText(tr("    Scan number: %1").arg(scanNumber));
@@ -460,7 +456,6 @@ void MainWindow::sms500SaveScanData(const QString &filePath)
     } else {
         FileHandle file(data, tr("SMS500 - Save Data"), filePath);
     }
-    statusBar()->showMessage("File generated successfully!", 5000);
 }
 
 QString MainWindow::sms500MainData()
@@ -1149,12 +1144,14 @@ void MainWindow::lsqNonLinStop()
 {
     lsqnonlin->stop();
     sms500StopScan();
+    ui->btnStartStopStarSimulator->setEnabled(false);
 }
 
 void MainWindow::lsqNonLinFinished()
 {
     ui->btnStartStopStarSimulator->setIcon(QIcon(":/pics/start.png"));
     ui->btnStartStopStarSimulator->setText("Start\nSimulator");
+    ui->btnStartStopStarSimulator->setEnabled(true);
     ui->x0DefinedInLedDriver->setChecked(true);
     lsqNonLinGuiConfig(true);
     sms500StopScan();
@@ -1172,8 +1169,11 @@ void MainWindow::lsqNonLinStarSettings()
         ui->starTemperature->setText("100");
     }
 
-    lsqNonLinStar->setMagnitude(ui->starMagnitude->text().toInt());
+    lsqNonLinStar->setMagnitude(ui->starMagnitude->text().toDouble());
     lsqNonLinStar->setTemperature(ui->starTemperature->text().toInt());
+
+    starIrradiance = trapezoidalNumInteg(lsqNonLinStar->spectralDataToPlot());
+    ui->starIrradianceLabel->setText(QString::number(starIrradiance, 'e', 2));
 
     plotLSqNonLin->setPlotLimits(350, 1000, 0, lsqNonLinStar->peak() * 1.2);
     plotLSqNonLin->showData(lsqNonLinStar->spectralDataToPlot(), lsqNonLinStar->peak() * 1.2, 1);
@@ -1368,7 +1368,6 @@ void MainWindow::lsqNonLinSaveData()
     }
 
     FileHandle file(this, data, tr("Star Simulator - Save Data"));
-    statusBar()->showMessage("File generated successfully!", 5000);
 }
 
 void MainWindow::lsqNonLinGuiConfig(bool enable)
@@ -1955,7 +1954,7 @@ void MainWindow::uiInputValidator()
             new QRegExpValidator(QRegExp("^([1-9][0-9]{0,3})$"), this);
     ui->longTermStabilityTimeInterval->setValidator(timeInterval);
 
-    QValidator *magnitudeValidator = new QRegExpValidator(QRegExp("^-[1-9][.][0-9]|-0[.][1-9]|[0-9][.][0-9]|-[1-9]|[0-9]$"), this);
+    QValidator *magnitudeValidator = new QRegExpValidator(QRegExp("^-[1-9][.][0-9]{1,2}|-0[.][1-9]{1,2}|[0-9][.][0-9]{1,2}|-[1-9]|[0-9]$"), this);
     ui->starMagnitude->setValidator(magnitudeValidator);
 
     QValidator *temperatureValidator = new QRegExpValidator(QRegExp("^[1-9][0-9]{0,5}$"), this);

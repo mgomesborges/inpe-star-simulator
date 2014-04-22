@@ -143,7 +143,7 @@ void LSqNonLin::run()
             }
 
             for (int i = 0; i < 1000; i++) {
-                // getObjectiveFunction(xCurrent);
+                getObjectiveFunction(xCurrent);
                 jacobian(xCurrent);
 
                 // Diagonal Matrix :: I = diag(diag((J'*J)));

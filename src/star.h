@@ -12,17 +12,17 @@ class Star : public QObject
 public:
     explicit Star(QObject *parent = 0);
 
-    int magnitude();
+    double magnitude();
     int temperature();
     double peak();
-    void setMagnitude(int magnitude);
+    void setMagnitude(double magnitude);
     void setTemperature(int temperature);
 
     QVector< QVector<double> > spectralData();
     QPolygonF spectralDataToPlot();
 
 private:
-    int starMagnitude;
+    double starMagnitude;
     int starTemperature;
     double starPeak;
 };

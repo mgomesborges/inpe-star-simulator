@@ -7,7 +7,7 @@ Star::Star(QObject *parent) :
     starTemperature = 7500;
 }
 
-int Star::magnitude()
+double Star::magnitude()
 {
     return starMagnitude;
 }
@@ -22,7 +22,7 @@ double Star::peak()
     return starPeak;
 }
 
-void Star::setMagnitude(int magnitude)
+void Star::setMagnitude(double magnitude)
 {
     starMagnitude = magnitude;
 }
@@ -43,7 +43,7 @@ QVector<QVector<double> > Star::spectralData()
     // Sao Jose dos Campos: INPE, 1997. Relatorio Tecnico.
 
     QVector< QVector<double> > starData;
-    double WL[641]; // Size = 1000nm - 360nm = 641
+    double WL[641]; // Size = [360, 1000]nm = 641
 
     // Important constants
     double k = 1.380650424e-23; // Boltzmann's constant J/k
@@ -51,9 +51,9 @@ QVector<QVector<double> > Star::spectralData()
     double c = 299792458;       // Speed of light m/s
 
     // Inits LED Modeling Data structure
-    starData.resize( 641 ); // Size = 1000nm - 360nm = 640
+    starData.resize(641); // Size = 1000nm - 360nm = 640
     for (int i = 0; i < 641; i++) {
-        starData[i].resize( 2 );
+        starData[i].resize(2);
         starData[i][0] = i + 360;
 
         // Converts Wavelengths in nanometers to meters
@@ -96,9 +96,8 @@ QPolygonF Star::spectralDataToPlot()
     QVector< QVector<double> > starData = spectralData();
 
     // Prepares Spectral Data to plot
-    for (int i = 0; i <= 640; i++) {
+    for (int i = 0; i < 641; i++) {
         spectralDataToPlot << QPointF(starData[i][0], starData[i][1]);
     }
     return spectralDataToPlot;
 }
-
