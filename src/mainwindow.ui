@@ -285,7 +285,7 @@
                <x>0</x>
                <y>0</y>
                <width>196</width>
-               <height>386</height>
+               <height>382</height>
               </rect>
              </property>
              <attribute name="label">
@@ -7233,12 +7233,14 @@ Database</string>
    </widget>
    <widget class="QMenu" name="menuStarSimulatorSettings">
     <property name="title">
-     <string>&amp;Star Simulator Settings</string>
+     <string>&amp;Configure</string>
     </property>
     <addaction name="actionConfigureLEDDriverconnection"/>
     <addaction name="separator"/>
-    <addaction name="actionLoadInitialSolution"/>
+    <addaction name="actionRemoteControl"/>
+    <addaction name="separator"/>
     <addaction name="actionLoadTransferenceFunction"/>
+    <addaction name="separator"/>
    </widget>
    <addaction name="menuCalibration"/>
    <addaction name="menuStarSimulatorSettings"/>
@@ -7274,34 +7276,19 @@ Database</string>
     <bool>true</bool>
    </property>
   </action>
-  <action name="actionLSqNonLinStarSettings">
-   <property name="text">
-    <string>Star Settings</string>
-   </property>
-  </action>
-  <action name="actionLSqNonLinStart">
-   <property name="text">
-    <string>Least Square</string>
-   </property>
-  </action>
-  <action name="actionLSqNonLinStop">
-   <property name="text">
-    <string>Stop Least Square</string>
-   </property>
-  </action>
   <action name="actionLoadTransferenceFunction">
    <property name="text">
-    <string>&amp;Load transference function table</string>
-   </property>
-  </action>
-  <action name="actionLoadInitialSolution">
-   <property name="text">
-    <string>Load &amp;initial solution</string>
+    <string>&amp;Transference function table</string>
    </property>
   </action>
   <action name="actionConfigureLEDDriverconnection">
    <property name="text">
-    <string>Configure LED Driver connection</string>
+    <string>LED Driver connection</string>
+   </property>
+  </action>
+  <action name="actionRemoteControl">
+   <property name="text">
+    <string>Remote Control</string>
    </property>
   </action>
  </widget>

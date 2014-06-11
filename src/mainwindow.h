@@ -26,6 +26,7 @@
 #include "longtermstabilityalarmclock.h"
 #include "longtermstabilityexportdialog.h"
 #include "ftdidevicechooserdialog.h"
+#include "remotecontrol.h"
 
 #include "version.h"
 
@@ -55,6 +56,7 @@ private:
     void ledDriverSignalAndSlot();
     void lsqNonLinSignalAndSlot();
     void longTermStabilitySignalAndSlot();
+    void remoteControlSignalAndSlot();
 
     MatrixXi lsqNonLinx0();
     QVector<int> ledDriverChannelValues();
@@ -81,6 +83,8 @@ private:
     LongTermStabilityAlarmClock *longTermStabilityAlarmClock;
     Plot *plotLTS;
     int longTermStabilityScanNumber;
+
+    RemoteControl *remoteControl;
 
 private slots:
     void aboutThisSoftware();
@@ -135,6 +139,8 @@ private slots:
     void ledDriverDac12Changed();
 
     void ledModeling();
+    void ledModelingStart();
+    void ledModelingStop();
     void ledModelingGuiConfig(bool enable);
     void ledModelingSaveData(QString channel);
     void ledModelingFinished();
@@ -166,6 +172,17 @@ private slots:
     void longTermStabilityHandleTableSelection();
     void longTermStabilityUpdateView();
     void longTermStabilityGuiConfig(bool enable);
+
+    void remoteSetSMS500AutoRange(bool enable);
+    void remoteSetSMS500NumberOfScans(QString value);
+    void remoteSetSMS500IntegrationTime(int index);
+    void remoteSetSMS500SamplesToAverage(int value);
+    void remoteSetSMS500BoxcarSmothing(int value);
+    void remoteSetSMS500NoiseReduction(bool enable);
+    void remoteSetSMS500NoiseReductionFactor(QString value);
+    void remoteSetSMS500CorrectForDynamicDark(bool enable);
+    void remoteSetStarMagnitude(QString value);
+    void remoteSetStarTemperature(QString value);
 };
 
 #endif // MAINWINDOW_H

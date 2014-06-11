@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui sql
+QT       += core gui sql network
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -26,7 +26,8 @@ SOURCES += main.cpp\
     star.cpp \
     filehandle.cpp \
     utils.cpp \
-    ftdidevicechooserdialog.cpp
+    ftdidevicechooserdialog.cpp \
+    remotecontrol.cpp
 
 HEADERS  += mainwindow.h \
     aboutsmsdialog.h \
@@ -45,13 +46,15 @@ HEADERS  += mainwindow.h \
     version.h \
     filehandle.h \
     utils.h \
-    ftdidevicechooserdialog.h
+    ftdidevicechooserdialog.h \
+    remotecontrol.h
 
 FORMS    += mainwindow.ui \
     aboutsmsdialog.ui \
     lsqloadleddatadialog.ui \
     longtermstabilityexportdialog.ui \
-    ftdidevicechooserdialog.ui
+    ftdidevicechooserdialog.ui \
+    remotecontrol.ui
 
 RESOURCES += \
     Pics.qrc

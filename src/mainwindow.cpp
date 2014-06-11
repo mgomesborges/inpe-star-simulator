@@ -25,6 +25,10 @@ MainWindow::MainWindow(QWidget *parent) :
     lsqnonlin                   = new LSqNonLin(this);
     longTermStability           = new LongTermStability(this);
     longTermStabilityAlarmClock = new LongTermStabilityAlarmClock(this);
+    remoteControl               = new RemoteControl(this);
+
+    remoteControl->listen();
+    connect(ui->actionRemoteControl, SIGNAL(triggered()), remoteControl, SLOT(exec()));
 
     plotSMS500->setxLabel(tr("Wavelength (nm)"));
     plotSMS500->setyLabel(tr("uW/nm"));
@@ -37,10 +41,11 @@ MainWindow::MainWindow(QWidget *parent) :
 
     uiInputValidator();
     sms500SignalAndSlot();
+    sms500OperationModeChanged();
     ledDriverSignalAndSlot();
     lsqNonLinSignalAndSlot();
     longTermStabilitySignalAndSlot();
-    sms500OperationModeChanged();
+    remoteControlSignalAndSlot();
 
     // Star Simulator :: Transference Function of Pinhole and Colimator
     starLoadTransferenceFunction();
@@ -56,7 +61,7 @@ void MainWindow::aboutThisSoftware()
 {
     QMessageBox::about(this, tr("About this Software"),
                        tr("<font color='#800000'><b>Star Simulator</b> %1, %2</font>"
-                          "<p>Based on Qt 5.0.2 (32 bit) and Qwt 6.0.1.</p>"
+                          "<p>Based on Qt 5.2.1 (32 bit) and Qwt 6.1.0-rc3.</p>"
                           "<p>This software was developed to simulates stars required to calibrate the "
                           "Autonomous Star Tracker (AST).</p>"
                           "<p><b>Engineering:</b><br>"
@@ -203,6 +208,9 @@ void MainWindow::sms500ConnectDisconnect()
 
 bool MainWindow::sms500Connect()
 {
+    if (sms500->isConnected() == true)
+        return true;
+
     sms500Configure();
 
     if (sms500->openConnection() == true) {
@@ -212,9 +220,7 @@ bool MainWindow::sms500Connect()
         return true;
     }
 
-    QMessageBox::warning(this, tr("Connection Error"),
-                         tr("Spectrometer Hardware not found.\n\n"
-                            "Check USB connection and try again..."));
+    warningMessage(tr("Connection Error"), tr("Spectrometer Hardware not found.\n\nCheck USB connection and try again..."));
 
     statusBar()->showMessage(tr("SMS500 not connected"));
     return false;
@@ -233,12 +239,6 @@ void MainWindow::sms500Disconnect()
 
 void MainWindow::sms500StartStopScan()
 {
-    if (sms500->isConnected() == false) {
-        if (sms500Connect() == false) {
-            return;
-        }
-    }
-
     if (ui->btnStartScan->text().contains("Start Scan")) {
         sms500StartScan();
     } else {
@@ -248,6 +248,15 @@ void MainWindow::sms500StartStopScan()
 
 void MainWindow::sms500StartScan()
 {
+    if (sms500->isConnected() == false) {
+        if (sms500Connect() == false) {
+            return;
+        }
+    }
+
+    if (sms500->isRunning())
+        return;
+
     sms500Configure();
     sms500->start();
     ui->btnStartScan->setIcon(QIcon(":/pics/stop.png"));
@@ -894,74 +903,84 @@ QVector<int> MainWindow::ledDriverChannelValues()
 void MainWindow::ledModeling()
 {
     if (ui->btnLedModeling->text().contains("LED\nModeling") == true) {
-        // SMS500 Configure
-        if (sms500->isConnected() == false) {
-            if (sms500Connect() == false) {
-                return;
-            }
-        }
+        ledModelingStart();
+    } else {
+        ledModelingStop();
+    }
+}
 
-        // Prevents errors with SMS500
-        if (sms500->isRunning()) {
-            sms500StopScan();
-        }
-
-        // LED Driver Connection
-        if (ledDriver->isConnected() == false) {
-            if(ledDriverConnect() == false) {
-                return;
-            }
-        }
-
-        // Choice directory to save data
-        ledModelingFilePath = QFileDialog::getExistingDirectory(this,tr("Choose the directory to save LED Modeling Data"), QDir::homePath());
-
-        if (ledModelingFilePath.isEmpty()) {
+void MainWindow::ledModelingStart()
+{
+    // SMS500 Configure
+    if (sms500->isConnected() == false) {
+        if (sms500Connect() == false) {
             return;
         }
+    }
 
-        // Clear LED Driver Gui
-        QVector<double> level(72, 0);
-        ledDriverGuiUpdate(level);
-
-        // Set Operation Mode to Flux and number of scans
-        ui->rbtnFlux->setChecked(true);
-        ui->numberOfScansLineEdit->setText("-1");
-
-        ledModelingGuiConfig(false);
-
-        // Led Modeling Setup
-        int modelingType;
-        ledModelingConfiguration.clear();
-        if (ui->levelIncDecComboBox->currentIndex() == 0) {
-            modelingType = LedDriver::levelDecrement;
-        } else {
-            modelingType = LedDriver::levelIncrement;
-        }
-
-        ledDriver->setModelingParameters(ui->startChannel->text().toInt(),
-                                         ui->endChannel->text().toInt(),
-                                         modelingType,
-                                         ui->levelIncDecValue->text().toInt());
-
-        ledModelingConfiguration.append(tr("%1\t%2")
-                                        .arg(modelingType)
-                                        .arg(ui->levelIncDecValue->text().toInt()));
-
-        ledDriver->start();
-
-        // Inits LED Modeling Data structure
-        ledModelingData.resize(641);
-        for (int i = 0; i < 641; i++) {
-            ledModelingData[i].resize(1);
-            ledModelingData[i][0] = i + 360;
-        }
-
-        ui->btnLedModeling->setText("STOP\nModeling");
-    } else {
-        ledDriver->stop();
+    // Prevents errors with SMS500
+    if (sms500->isRunning()) {
         sms500StopScan();
     }
+
+    // LED Driver Connection
+    if (ledDriver->isConnected() == false) {
+        if(ledDriverConnect() == false) {
+            return;
+        }
+    }
+
+    // Choice directory to save data
+    ledModelingFilePath = QFileDialog::getExistingDirectory(this,tr("Choose the directory to save LED Modeling Data"), QDir::homePath());
+
+    if (ledModelingFilePath.isEmpty()) {
+        return;
+    }
+
+    // Clear LED Driver Gui
+    QVector<double> level(72, 0);
+    ledDriverGuiUpdate(level);
+
+    // Set Operation Mode to Flux and number of scans
+    ui->rbtnFlux->setChecked(true);
+    ui->numberOfScansLineEdit->setText("-1");
+
+    ledModelingGuiConfig(false);
+
+    // Led Modeling Setup
+    int modelingType;
+    ledModelingConfiguration.clear();
+    if (ui->levelIncDecComboBox->currentIndex() == 0) {
+        modelingType = LedDriver::levelDecrement;
+    } else {
+        modelingType = LedDriver::levelIncrement;
+    }
+
+    ledDriver->setModelingParameters(ui->startChannel->text().toInt(),
+                                     ui->endChannel->text().toInt(),
+                                     modelingType,
+                                     ui->levelIncDecValue->text().toInt());
+
+    ledModelingConfiguration.append(tr("%1\t%2")
+                                    .arg(modelingType)
+                                    .arg(ui->levelIncDecValue->text().toInt()));
+
+    ledDriver->start();
+
+    // Inits LED Modeling Data structure
+    ledModelingData.resize(641);
+    for (int i = 0; i < 641; i++) {
+        ledModelingData[i].resize(1);
+        ledModelingData[i][0] = i + 360;
+    }
+
+    ui->btnLedModeling->setText("STOP\nModeling");
+}
+
+void MainWindow::ledModelingStop()
+{
+    ledDriver->stop();
+    sms500StopScan();
 }
 
 void MainWindow::ledModelingGuiConfig(bool enable)
@@ -994,9 +1013,9 @@ void MainWindow::ledModelingGuiConfig(bool enable)
     // Menu
     ui->actionSMS500SystemZero->setEnabled(enable);
     ui->actionSMS500CalibrateSystem->setEnabled(enable);
-    ui->actionLoadInitialSolution->setEnabled(enable);
     ui->actionLoadTransferenceFunction->setEnabled(enable);
     ui->actionConfigureLEDDriverconnection->setEnabled(enable);
+    ui->actionRemoteControl->setEnabled(enable);
 }
 
 void MainWindow::ledModelingSaveData(QString channel)
@@ -1078,6 +1097,10 @@ void MainWindow::lsqNonLinStartStop()
 
 void MainWindow::lsqNonLinStart()
 {
+    if (lsqnonlin->isRunning()) {
+        return;
+    }
+
     // Checks connection with SMS500
     if (sms500->isConnected() == false) {
         if (sms500Connect() == false) {
@@ -1142,19 +1165,22 @@ void MainWindow::lsqNonLinStart()
 
 void MainWindow::lsqNonLinStop()
 {
-    lsqnonlin->stop();
-    sms500StopScan();
-    ui->btnStartStopStarSimulator->setEnabled(false);
+    if (lsqnonlin->isRunning()) {
+        ui->btnStartStopStarSimulator->setEnabled(false);
+        lsqnonlin->stop();
+//        lsqnonlin->wait(5000);
+//        sms500StopScan();
+    }
 }
 
 void MainWindow::lsqNonLinFinished()
 {
+    sms500StopScan();
     ui->btnStartStopStarSimulator->setIcon(QIcon(":/pics/start.png"));
     ui->btnStartStopStarSimulator->setText("Start\nSimulator");
     ui->btnStartStopStarSimulator->setEnabled(true);
     ui->x0DefinedInLedDriver->setChecked(true);
     lsqNonLinGuiConfig(true);
-    sms500StopScan();
 
     lsqNonLinLog(tr("\n================== Star Simulator Finished ==================="
                     "\n%1\tElapsed time: %2 seconds\n"
@@ -1393,9 +1419,9 @@ void MainWindow::lsqNonLinGuiConfig(bool enable)
     // Menu
     ui->actionSMS500SystemZero->setEnabled(enable);
     ui->actionSMS500CalibrateSystem->setEnabled(enable);
-    ui->actionLoadInitialSolution->setEnabled(enable);
     ui->actionLoadTransferenceFunction->setEnabled(enable);
     ui->actionConfigureLEDDriverconnection->setEnabled(enable);
+    ui->actionRemoteControl->setEnabled(enable);
 }
 
 bool MainWindow::lsqNonLinLoadInitialSolution()
@@ -1462,9 +1488,13 @@ void MainWindow::starLoadTransferenceFunction()
 
 bool MainWindow::starUpdateTransferenceFunction()
 {
-    bool ok;
+    FileHandle fileInput;
 
-    FileHandle fileInput(this, tr("Load Transference Function"));
+    if (fileInput.open(this, tr("Load Transference Function")) == false) {
+        return false;
+    }
+
+    bool ok;
     QString data = fileInput.readSection(tr("[TransferenceFunction]"), &ok);
 
     if (ok == false) {
@@ -1912,10 +1942,63 @@ void MainWindow::longTermStabilityGuiConfig(bool enable)
 
     // Menu
     if (lsqnonlin->isRunning() == false) {
-        ui->actionLoadInitialSolution->setEnabled(enable);
+        ui->actionRemoteControl->setEnabled(enable);
         ui->actionLoadTransferenceFunction->setEnabled(enable);
         ui->actionConfigureLEDDriverconnection->setEnabled(enable);
     }
+}
+
+void MainWindow::remoteSetSMS500AutoRange(bool enable)
+{
+    ui->AutoRangeCheckBox->setChecked(enable);
+}
+
+void MainWindow::remoteSetSMS500NumberOfScans(QString value)
+{
+    ui->numberOfScansLineEdit->setText(value);
+}
+
+void MainWindow::remoteSetSMS500IntegrationTime(int index)
+{
+    ui->integrationTimeComboBox->setCurrentIndex(index);
+}
+
+void MainWindow::remoteSetSMS500SamplesToAverage(int value)
+{
+    ui->samplesToAverageSpinBox->setValue(value);
+}
+
+void MainWindow::remoteSetSMS500BoxcarSmothing(int value)
+{
+    ui->smoothingSpinBox->setValue(value);
+}
+
+void MainWindow::remoteSetSMS500NoiseReduction(bool enable)
+{
+    ui->noiseReductionCheckBox->setChecked(enable);
+}
+
+void MainWindow::remoteSetSMS500NoiseReductionFactor(QString value)
+{
+    ui->noiseReductionLineEdit->setText(value);
+}
+
+void MainWindow::remoteSetSMS500CorrectForDynamicDark(bool enable)
+{
+    ui->dynamicDarkCheckBox->setChecked(enable);
+}
+
+void MainWindow::remoteSetStarMagnitude(QString value)
+
+{
+    ui->starMagnitude->setText(value);
+    lsqNonLinStarSettings();
+}
+
+void MainWindow::remoteSetStarTemperature(QString value)
+{
+    ui->starTemperature->setText(value);
+    lsqNonLinStarSettings();
 }
 
 void MainWindow::uiInputValidator()
@@ -2343,7 +2426,6 @@ void MainWindow::ledDriverSignalAndSlot()
 void MainWindow::lsqNonLinSignalAndSlot()
 {
     connect(ui->actionLoadTransferenceFunction, SIGNAL(triggered(bool)), this, SLOT(starUpdateTransferenceFunction()));
-    connect(ui->actionLoadInitialSolution,      SIGNAL(triggered(bool)), this, SLOT(lsqNonLinLoadInitialSolution()));
     connect(ui->btnLoadInitialSolution,         SIGNAL(clicked(bool)),   this, SLOT(lsqNonLinLoadInitialSolution()));
     connect(ui->btnSaveStarSimulatorData,       SIGNAL(clicked()),       this, SLOT(lsqNonLinSaveData()));
 
@@ -2377,3 +2459,36 @@ void MainWindow::longTermStabilitySignalAndSlot()
     connect(ui->tableView,                          SIGNAL(clicked(QModelIndex)), this, SLOT(longTermStabilityHandleTableSelection()));
 }
 
+void MainWindow::remoteControlSignalAndSlot()
+{
+    connect(remoteControl, SIGNAL(setSMS500AutoRange(bool)), this, SLOT(remoteSetSMS500AutoRange(bool)));
+    connect(remoteControl, SIGNAL(SMS500Connect()), this, SLOT(sms500Connect()));
+    connect(remoteControl, SIGNAL(SMS500Disconnect()), this, SLOT(sms500Disconnect()));
+    connect(remoteControl, SIGNAL(SMS500StartScan()), this, SLOT(sms500StartScan()));
+    connect(remoteControl, SIGNAL(SMS500StopScan()), this, SLOT(sms500StopScan()));
+    connect(remoteControl, SIGNAL(setSMS500NumberOfScans(QString)), this, SLOT(remoteSetSMS500NumberOfScans(QString)));
+    connect(remoteControl, SIGNAL(setSMS500IntegrationTime(int)), this, SLOT(remoteSetSMS500IntegrationTime(int)));
+    connect(remoteControl, SIGNAL(setSMS500SamplesToAverage(int)), this, SLOT(remoteSetSMS500SamplesToAverage(int)));
+    connect(remoteControl, SIGNAL(setSMS500BoxcarSmothing(int)), this, SLOT(remoteSetSMS500BoxcarSmothing(int)));
+    connect(remoteControl, SIGNAL(setSMS500NoiseReduction(bool)), this, SLOT(remoteSetSMS500NoiseReduction(bool)));
+    connect(remoteControl, SIGNAL(setSMS500NoiseReductionFactor(QString)), this, SLOT(remoteSetSMS500NoiseReductionFactor(QString)));
+    connect(remoteControl, SIGNAL(setSMS500CorrectForDynamicDark(bool)), this, SLOT(remoteSetSMS500CorrectForDynamicDark(bool)));
+
+    connect(remoteControl, SIGNAL(loadLEDDriverValues(QVector<double>)), this, SLOT(ledDriverGuiUpdate(QVector<double>)));
+    connect(remoteControl, SIGNAL(setLEDDriverV2Ref(bool)), ui->setV2RefCheckBox, SLOT(setChecked(bool)));
+    connect(remoteControl, SIGNAL(startLEDDriverModeling()), this, SLOT(ledModelingStart()));
+    connect(remoteControl, SIGNAL(stopLEDDriverModeling()), this, SLOT(ledModelingStop()));
+
+    connect(remoteControl, SIGNAL(setStarMagnitude(QString)), this, SLOT(remoteSetStarMagnitude(QString)));
+    connect(remoteControl, SIGNAL(setStarTemperature(QString)), this, SLOT(remoteSetStarTemperature(QString)));
+    connect(remoteControl, SIGNAL(setStarSimulatorAlgorithmLM(bool)), ui->levenbergMarquardt, SLOT(setChecked(bool)));
+    connect(remoteControl, SIGNAL(setStarSimulatorAlgorithmGD(bool)), ui->gradientDescent, SLOT(setChecked(bool)));
+    connect(remoteControl, SIGNAL(setStarSimulatorX0random(bool)), ui->x0Random, SLOT(setChecked(bool)));
+    connect(remoteControl, SIGNAL(setStarSimulatorX0userDefined(bool)), ui->x0UserDefined, SLOT(setChecked(bool)));
+    connect(remoteControl, SIGNAL(setStarSimulatorX0ledDriver(bool)), ui->x0DefinedInLedDriver, SLOT(setChecked(bool)));
+    connect(remoteControl, SIGNAL(starSimulatorLoadInitialSolution(QVector<double>)), this, SLOT(lsqNonLinInitialSolutionGuiUpdate(QVector<double>)));
+    connect(remoteControl, SIGNAL(startStarSimulator()), this, SLOT(lsqNonLinStart()));
+    connect(remoteControl, SIGNAL(stopStarSimulator()), this, SLOT(lsqNonLinStop()));
+
+    connect(remoteControl, SIGNAL(warningMessage(QString,QString)), this, SLOT(warningMessage(QString,QString)));
+}
