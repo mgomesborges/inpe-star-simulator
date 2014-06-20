@@ -183,6 +183,8 @@ private slots:
     void remoteSetSMS500CorrectForDynamicDark(bool enable);
     void remoteSetStarMagnitude(QString value);
     void remoteSetStarTemperature(QString value);
+    void remoteStarSimulatorStatus();
+    void remoteStarSimulatorIrradiances();
 };
 
 #endif // MAINWINDOW_H

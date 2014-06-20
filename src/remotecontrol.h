@@ -23,7 +23,14 @@ public:
         CONNECTION_REFUSED,
         INVALID_COMMAND,
         ERROR_WRONG_PARAMETERS,
-        WITHOUT_ANSWER
+        WITHOUT_ANSWER,
+    };
+
+    enum algorithmStatus
+    {
+        FITING_OK = 0,
+        PERFORMING_FITING,
+        STOPPED
     };
 
     explicit RemoteControl(QWidget *parent = 0);
@@ -36,6 +43,8 @@ public slots:
     void disconnected();
     void setPort();
     bool isConnected();
+    void sendAnswer(int errorCode);
+    void sendAnswer(QString data);
 
 signals:
     void setSMS500AutoRange(bool enable);
@@ -67,6 +76,8 @@ signals:
     void starSimulatorLoadInitialSolution(QVector<double> values);
     void startStarSimulator();
     void stopStarSimulator();
+    void starSimulatorStatus();
+    void starSimulatorIrradiances();
 
 private:
     Ui::RemoteControl *ui;
@@ -74,8 +85,6 @@ private:
     QTcpSocket* socket;
     int numberOfConnections;
     int port;
-
-    void sendAnswer(int errorCode);
 };
 
 #endif // REMOTECONTROL_H

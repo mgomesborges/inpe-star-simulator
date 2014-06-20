@@ -58,7 +58,6 @@ void RemoteControl::readyRead()
         if(tokens[0] == "SMS500Connect") {
             if (tokens[1].size() == 0) {
                 emit SMS500Connect();
-                sendAnswer(SUCCESS);
             } else {
                 sendAnswer(ERROR_WRONG_PARAMETERS);
             }
@@ -76,7 +75,6 @@ void RemoteControl::readyRead()
         else if(tokens[0] == "SMS500StartScan") {
             if (tokens[1].size() == 0) {
                 emit SMS500StartScan();
-                sendAnswer(SUCCESS);
             } else {
                 sendAnswer(ERROR_WRONG_PARAMETERS);
             }
@@ -187,15 +185,9 @@ void RemoteControl::readyRead()
             }
         }
 
-        else if (tokens[0] == "closeConnection") {
-            sendAnswer(SUCCESS);
-            socket->disconnectFromHost();
-        }
-
         else  if(tokens[0] == "LEDDriverConnect") {
             if (tokens[1].size() == 0) {
                 emit LEDDriverConnect();
-                sendAnswer(SUCCESS);
             } else {
                 sendAnswer(ERROR_WRONG_PARAMETERS);
             }
@@ -330,7 +322,6 @@ void RemoteControl::readyRead()
         else if(tokens[0] == "startStarSimulator") {
             if (tokens[1].size() == 0) {
                 emit startStarSimulator();
-                sendAnswer(SUCCESS);
             } else {
                 sendAnswer(ERROR_WRONG_PARAMETERS);
             }
@@ -343,6 +334,27 @@ void RemoteControl::readyRead()
             } else {
                 sendAnswer(ERROR_WRONG_PARAMETERS);
             }
+        }
+
+        else if(tokens[0] == "starSimulatorStatus") {
+            if (tokens[1].size() == 0) {
+                emit starSimulatorStatus();
+            } else {
+                sendAnswer(ERROR_WRONG_PARAMETERS);
+            }
+        }
+
+        else if(tokens[0] == "starSimulatorIrradiances") {
+            if (tokens[1].size() == 0) {
+                emit starSimulatorIrradiances();
+            } else {
+                sendAnswer(ERROR_WRONG_PARAMETERS);
+            }
+        }
+
+        else if (tokens[0] == "closeConnection") {
+            sendAnswer(SUCCESS);
+            socket->disconnectFromHost();
         }
 
         else {
@@ -378,5 +390,14 @@ bool RemoteControl::isConnected()
 
 void RemoteControl::sendAnswer(int errorCode)
 {
-    socket->write(tr("%1").arg(errorCode).toStdString().data());
+    if (numberOfConnections >= 1) {
+        socket->write(tr("%1").arg(errorCode).toStdString().data());
+    }
+}
+
+void RemoteControl::sendAnswer(QString data)
+{
+    if (numberOfConnections >= 1) {
+        socket->write(data.toUtf8().data());
+    }
 }

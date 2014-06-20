@@ -27,6 +27,9 @@ MainWindow::MainWindow(QWidget *parent) :
     longTermStabilityAlarmClock = new LongTermStabilityAlarmClock(this);
     remoteControl               = new RemoteControl(this);
 
+    outputIrradiance = 0;
+    starIrradiance   = 0;
+
     remoteControl->listen();
     connect(ui->actionRemoteControl, SIGNAL(triggered()), remoteControl, SLOT(exec()));
 
@@ -80,7 +83,9 @@ void MainWindow::aboutThisSoftware()
 
 void MainWindow::warningMessage(const QString &caption, const QString &message)
 {
-    QMessageBox::warning(this, caption, message);
+    if (remoteControl->isConnected() == false) {
+        QMessageBox::warning(this, caption, message);
+    }
 }
 
 void MainWindow::plotMoved( const QPoint &pos )
@@ -208,8 +213,10 @@ void MainWindow::sms500ConnectDisconnect()
 
 bool MainWindow::sms500Connect()
 {
-    if (sms500->isConnected() == true)
+    if (sms500->isConnected() == true) {
+        remoteControl->sendAnswer(RemoteControl::SUCCESS);
         return true;
+    }
 
     sms500Configure();
 
@@ -217,12 +224,13 @@ bool MainWindow::sms500Connect()
         statusBar()->showMessage(tr("SMS500 successfully connected"),5000);
         ui->btnConnectDisconnect->setIcon(QIcon(":/pics/disconnect.png"));
         ui->btnConnectDisconnect->setText(tr("Disconnect SMS"));
+        remoteControl->sendAnswer(RemoteControl::SUCCESS);
         return true;
     }
 
     warningMessage(tr("Connection Error"), tr("Spectrometer Hardware not found.\n\nCheck USB connection and try again..."));
-
     statusBar()->showMessage(tr("SMS500 not connected"));
+    remoteControl->sendAnswer(RemoteControl::CONNECTION_REFUSED);
     return false;
 }
 
@@ -269,6 +277,8 @@ void MainWindow::sms500StartScan()
     ui->operationMode->setEnabled(false);
     ui->actionSMS500SystemZero->setEnabled(false);
     ui->actionSMS500CalibrateSystem->setEnabled(false);
+
+    remoteControl->sendAnswer(RemoteControl::SUCCESS);
 }
 
 void MainWindow::sms500StopScan()
@@ -532,12 +542,13 @@ bool MainWindow::ledDriverConnect()
         ledDriverDac11Changed();
         ledDriverDac12Changed();
 
+        remoteControl->sendAnswer(RemoteControl::SUCCESS);
+
         return true;
     }
 
-    QMessageBox::warning(this, tr("LED Driver Error"),
-                         tr("LED Driver Open Comunication Error.\n\n"
-                            "Check USB connection and try again..."));
+    warningMessage(tr("LED Driver Error"), tr("LED Driver Open Comunication Error.\n\nCheck USB connection and try again..."));
+    remoteControl->sendAnswer(RemoteControl::CONNECTION_REFUSED);
 
     return false;
 }
@@ -1161,6 +1172,8 @@ void MainWindow::lsqNonLinStart()
                     "\n%1\n"
                     "======================================================")
                  .arg(QDateTime::currentDateTime().toString(Qt::SystemLocaleShortDate)));
+
+    remoteControl->sendAnswer(RemoteControl::SUCCESS);
 }
 
 void MainWindow::lsqNonLinStop()
@@ -1168,8 +1181,8 @@ void MainWindow::lsqNonLinStop()
     if (lsqnonlin->isRunning()) {
         ui->btnStartStopStarSimulator->setEnabled(false);
         lsqnonlin->stop();
-//        lsqnonlin->wait(5000);
-//        sms500StopScan();
+        //        lsqnonlin->wait(5000);
+        //        sms500StopScan();
     }
 }
 
@@ -2001,6 +2014,45 @@ void MainWindow::remoteSetStarTemperature(QString value)
     lsqNonLinStarSettings();
 }
 
+void MainWindow::remoteStarSimulatorStatus()
+{
+    QString data;
+    data.append(tr("%1").arg(RemoteControl::SUCCESS));
+    data.append(tr(",%1").arg(QDateTime::currentDateTime().toString(Qt::SystemLocaleShortDate)));
+
+    switch (lsqnonlin->algorithmStatus()) {
+        case LSqNonLin::FITING_OK:
+            data.append(tr(",%1").arg(RemoteControl::FITING_OK));
+            break;
+        case LSqNonLin::PERFORMING_FITING:
+            data.append(tr(",%1").arg(RemoteControl::PERFORMING_FITING));
+            break;
+        case LSqNonLin::STOPPED:
+            data.append(tr(",%1").arg(RemoteControl::STOPPED));
+            break;
+        default:
+            data.append(tr(",%1").arg(RemoteControl::ERROR_WRONG_PARAMETERS));
+            break;
+    }
+
+    data.append(tr(",%1").arg(lsqnonlin->fx()));
+    data.append(tr(",%1").arg(lsqnonlin->iterationNumber()));
+    data.append(tr(",%1").arg(sms500->dominanteWavelength()));
+    data.append(tr(",%1").arg(sms500->peakWavelength()));
+    data.append(tr(",%1").arg(sms500->fwhm()));
+    data.append(tr(",%1").arg(sms500->power()));
+    data.append(tr(",%1").arg(sms500->purity()));
+    data.append(tr(",%1").arg(starIrradiance));
+    data.append(tr(",%1").arg(outputIrradiance));
+
+    remoteControl->sendAnswer(data);
+}
+
+void MainWindow::remoteStarSimulatorIrradiances()
+{
+    remoteControl->sendAnswer(tr("%1,%2,%3").arg(RemoteControl::SUCCESS).arg(outputIrradiance).arg(starIrradiance));
+}
+
 void MainWindow::uiInputValidator()
 {
     QValidator *numberOfScansValidator =
@@ -2474,6 +2526,8 @@ void MainWindow::remoteControlSignalAndSlot()
     connect(remoteControl, SIGNAL(setSMS500NoiseReductionFactor(QString)), this, SLOT(remoteSetSMS500NoiseReductionFactor(QString)));
     connect(remoteControl, SIGNAL(setSMS500CorrectForDynamicDark(bool)), this, SLOT(remoteSetSMS500CorrectForDynamicDark(bool)));
 
+    connect(remoteControl, SIGNAL(LEDDriverConnect()), this, SLOT(ledDriverConnect()));
+    connect(remoteControl, SIGNAL(LEDDriverDisconnect()), this, SLOT(ledDriverDisconnect()));
     connect(remoteControl, SIGNAL(loadLEDDriverValues(QVector<double>)), this, SLOT(ledDriverGuiUpdate(QVector<double>)));
     connect(remoteControl, SIGNAL(setLEDDriverV2Ref(bool)), ui->setV2RefCheckBox, SLOT(setChecked(bool)));
     connect(remoteControl, SIGNAL(startLEDDriverModeling()), this, SLOT(ledModelingStart()));
@@ -2489,6 +2543,8 @@ void MainWindow::remoteControlSignalAndSlot()
     connect(remoteControl, SIGNAL(starSimulatorLoadInitialSolution(QVector<double>)), this, SLOT(lsqNonLinInitialSolutionGuiUpdate(QVector<double>)));
     connect(remoteControl, SIGNAL(startStarSimulator()), this, SLOT(lsqNonLinStart()));
     connect(remoteControl, SIGNAL(stopStarSimulator()), this, SLOT(lsqNonLinStop()));
+    connect(remoteControl, SIGNAL(starSimulatorStatus()), this, SLOT(remoteStarSimulatorStatus()));
+    connect(remoteControl, SIGNAL(starSimulatorIrradiances()), this, SLOT(remoteStarSimulatorIrradiances()));
 
     connect(remoteControl, SIGNAL(warningMessage(QString,QString)), this, SLOT(warningMessage(QString,QString)));
 }

@@ -8,10 +8,13 @@ LSqNonLin::LSqNonLin(QObject *parent) :
     objectiveFunction.resize(641,1);
     minimumDigitalLevelByChannel.resize(1,72);
 
-    initialized           = false;
-    stopThread            = false;
-    enabledToContinue     = false;
-    x0Type                = x0Random;
+    status            = STOPPED;
+    _fx               = 0;
+    iteration         = 0;
+    initialized       = false;
+    stopThread        = false;
+    enabledToContinue = false;
+    x0Type            = x0Random;
 
     // Create seed for the random
     QTime time = QTime::currentTime();
@@ -31,6 +34,7 @@ int LSqNonLin::randomInt(int low, int high)
 void LSqNonLin::stop()
 {
     stopThread = true;
+    status     = STOPPED;
 }
 
 bool LSqNonLin::loadDerivates()
@@ -95,9 +99,25 @@ void LSqNonLin::setx0Type(int x0SearchType, MatrixXi x)
     x0     = x;
 }
 
+int LSqNonLin::algorithmStatus()
+{
+    return status;
+}
+
+int LSqNonLin::iterationNumber()
+{
+    return iteration;
+}
+
+double LSqNonLin::fx()
+{
+    return _fx;
+}
+
 void LSqNonLin::run()
 {
     stopThread = false;
+    status     = PERFORMING_FITING;
 
     if (chosenAlgorithm == leastSquareNonLinear) {
         if (loadDerivates() == true) {
@@ -131,6 +151,8 @@ void LSqNonLin::run()
 
     alpha        = 6.5;  // Empirical value
     fxBest       = 1e15; // Big number
+    _fx          = 0;
+    iteration    = 0;
     stopCriteria = 0;
 
     while (stopThread == false) {
@@ -143,6 +165,8 @@ void LSqNonLin::run()
             }
 
             for (int i = 0; i < 1000; i++) {
+                iteration++;
+
                 getObjectiveFunction(xCurrent);
                 jacobian(xCurrent);
 
@@ -197,6 +221,8 @@ void LSqNonLin::run()
                     fxBest       = fxCurrent;
                 }
 
+                _fx = fxCurrent;
+
                 emit info(tr("Iteration: %1\tf(x): %2\tf(x)_best: %3\tDamping factor: %4").arg(i).arg(fxCurrent).arg(fxBest).arg(alpha));
             }
         } else if (chosenAlgorithm == gradientDescent) {
@@ -206,6 +232,8 @@ void LSqNonLin::run()
             alpha     = 0.05;  // Empirical value
 
             for (int i = 0; i < 1000; i++) {
+                iteration++;
+
                 for (int channel = 25; channel <= 96; channel++) {
                     // getObjectiveFunction(xCurrent);
 
@@ -287,6 +315,8 @@ void LSqNonLin::run()
                     fxBest       = fxCurrent;
                 }
 
+                _fx = fxCurrent;
+
                 emit info(tr("Iteration: %1\tf(x): %2\tf(x)_best: %3\tDamping factor: %4").arg(i).arg(fxCurrent).arg(fxBest).arg(alpha));
 
                 if (stopThread == true) {
@@ -301,6 +331,8 @@ void LSqNonLin::run()
         double secondMedia;
         double max = firstMedia * 1.01;
         double min = firstMedia * 0.99;
+
+        status = FITING_OK;
 
         while (stopThread == false) {
             secondMedia = media(10);
@@ -317,6 +349,7 @@ void LSqNonLin::run()
         }
     }
 
+    status = STOPPED;
     emit finished();
 }
 

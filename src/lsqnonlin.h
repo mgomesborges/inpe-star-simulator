@@ -27,6 +27,13 @@ public:
         gradientDescent
     };
 
+    enum algorithmConditions
+    {
+        FITING_OK = 0,
+        PERFORMING_FITING,
+        STOPPED
+    };
+
     explicit LSqNonLin(QObject *parent = 0);
     ~LSqNonLin();
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -35,6 +42,9 @@ public:
     bool loadDerivates();
     void setAlgorithm(int algorithm);
     void setx0Type(int x0SearchType, MatrixXi x = MatrixXi());
+    int  algorithmStatus();
+    int  iterationNumber();
+    double fx();
 
 signals:
     void ledDataNotFound();
@@ -56,6 +66,9 @@ private:
     bool stopThread;
     int chosenAlgorithm;
     int x0Type;
+    int status;
+    int iteration;
+    double _fx;
     MatrixXi x0;
     MatrixXi solution;
     MatrixXd jacobianMatrix;
