@@ -19,6 +19,11 @@ public:
         levelDecrement
     };
 
+    enum mode {
+        ledModeling,
+        channelTest
+    };
+
     explicit LedDriver(QObject *parent = 0);
     ~LedDriver();
 
@@ -35,6 +40,7 @@ signals:
     void performScan();
     void saveData(QString currentChannel);
     void modelingFinished();
+    void testFinished();
     void info(QString message);
 
 public slots:
@@ -42,16 +48,19 @@ public slots:
     bool openConnection();
     void closeConnection();
     bool isConnected();
-    bool writeData(int dac, int port, int value);
+    bool updateChannel(int channel, int value);
     bool resetDACs();
     bool configureVoltage();
     void setV2Ref(bool enable);
     void enabledModelingContinue();
     bool ftdiCyclePort();
+    int operationMode();
+    void setOperationMode(int mode);
+    int currentChannel();
 
 private:
     void run();
-    bool readyToContinue();
+    bool writeData(int dac, int port, int value);
 
     FT_HANDLE ftHandle;
     bool connected;
@@ -63,6 +72,8 @@ private:
     bool enabledModeling;
     bool enabledContinue;
     bool nextChannel;
+    int _channel;
+    int _operationMode;
     QVector<int> levelIndex;
 };
 

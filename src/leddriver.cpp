@@ -3,8 +3,9 @@
 LedDriver::LedDriver(QObject *parent) :
     QThread(parent)
 {
-    connected = false;
-    v2ref     = true;
+    connected      = false;
+    v2ref          = true;
+    _operationMode = ledModeling;
 }
 
 LedDriver::~LedDriver()
@@ -27,9 +28,9 @@ bool LedDriver::openConnection()
             if (FT_Open(iDevice, &ftHandle) == FT_OK) {
                 FT_SetTimeouts(ftHandle, 1000, 1000);
                 connected = true;
-                if (configureVoltage() == false) {
+                if (configureVoltage() == false)
                     closeConnection();
-                }
+
                 return connected;
             }
             msleep(1000);
@@ -42,9 +43,8 @@ bool LedDriver::openConnection()
 
 void LedDriver::closeConnection()
 {
-    if (isConnected() == true) {
+    if (isConnected() == true)
         resetDACs();
-    }
 
     connected = false;
     FT_Close(ftHandle);
@@ -53,6 +53,23 @@ void LedDriver::closeConnection()
 bool LedDriver::isConnected()
 {
     return connected;
+}
+
+bool LedDriver::updateChannel(int channel, int value)
+{
+    int dac;
+    int port;
+
+    // Find the value of DAC
+    if ((channel % 8) != 0)
+        dac  = (channel / 8);
+    else
+        dac  = channel / 8 - 1;
+
+    // Find the value of Port
+    port = channel - (dac * 8) - 1;
+
+    return writeData(dac, port, value);
 }
 
 bool LedDriver::writeData(int dac, int port, int value)
@@ -73,15 +90,13 @@ bool LedDriver::writeData(int dac, int port, int value)
 
         for (int i = 0; i < 9; i++) {
             for (int attempts = 0; attempts < 3; attempts++) {
-                if (FT_Write(ftHandle, &txBuffer[i], 1, &bytesWritten) == FT_OK && bytesWritten == 1) {
+                if (FT_Write(ftHandle, &txBuffer[i], 1, &bytesWritten) == FT_OK && bytesWritten == 1)
                     break; // Ok, next information
-                }
 
-                if (FT_ResetDevice(ftHandle) == FT_OK) {
+                if (FT_ResetDevice(ftHandle) == FT_OK)
                     FT_SetTimeouts(ftHandle, 1000, 1000);
-                } else {
+                else
                     return false;
-                }
             }
         }
 
@@ -95,9 +110,8 @@ bool LedDriver::resetDACs()
 {
     // RESET DAC0 to DAC11
     for (int dac = 0; dac < 12; dac++) {
-        if (writeData(dac, 0xF, 0) == false) {
+        if (writeData(dac, 0xF, 0) == false)
             return false;
-        }
     }
 
     return configureVoltage();
@@ -107,14 +121,12 @@ bool LedDriver::configureVoltage()
 {
     int vref = 0x30; // v2ref ON
 
-    if (v2ref == false) {
+    if (v2ref == false)
         vref = 0x00; // v2ref OFF
-    }
 
     for (int dac = 0; dac < 12; dac++) {
-        if (writeData(dac, 0x8, vref) == false) {
+        if (writeData(dac, 0x8, vref) == false)
             return false;
-        }
     }
 
     return true;
@@ -162,6 +174,21 @@ bool LedDriver::ftdiCyclePort()
     return false;
 }
 
+int LedDriver::operationMode()
+{
+    return _operationMode;
+}
+
+void LedDriver::setOperationMode(int mode)
+{
+    _operationMode = mode;
+}
+
+int LedDriver::currentChannel()
+{
+    return _channel;
+}
+
 void LedDriver::modelingNextChannel()
 {
     nextChannel = true;
@@ -174,95 +201,132 @@ QVector<int> LedDriver::digitalLevelIndex()
 
 void LedDriver::run()
 {
-    QTime timer;
-    int dac;
-    int port;
+    if (_operationMode == ledModeling) {
+        QTime timer;
+        int dac;
+        int port;
 
-    enabledModeling = true;
-    nextChannel     = false;
+        enabledModeling = true;
+        nextChannel     = false;
 
-    for (int channel = startChannel; channel <= endChannel && enabledModeling == true; channel++) {
-        resetDACs();
+        for (_channel = startChannel; _channel <= endChannel && enabledModeling == true; _channel++) {
+            resetDACs();
 
-        // Setup Increment or Decrement level
-        int level = 0;
+            // Setup Increment or Decrement level
+            int level = 0;
 
-        if (updateType == levelDecrement) {
-            level  = 4095;
-        }
+            if (updateType == levelDecrement)
+                level  = 4095;
 
-        levelIndex.clear();
+            levelIndex.clear();
 
-        for (int counter = 0; counter < 4096; counter++) {
-            emit info(tr("[Channel %1, Digital Level %2]").arg(channel).arg(level));
+            for (int counter = 0; counter < 4096; counter++) {
+                emit info(tr("[Channel %1, Digital Level %2]").arg(_channel).arg(level));
 
-            levelIndex.append(level);
+                levelIndex.append(level);
 
-            // Find the value of DAC
-            if ((channel % 8) != 0) {
-                dac  = (channel / 8);
-            } else {
-                dac  = channel / 8 - 1;
+                // Find the value of DAC
+                if ((_channel % 8) != 0)
+                    dac  = (_channel / 8);
+                else
+                    dac  = _channel / 8 - 1;
+
+                // Find the value of Port
+                port = _channel - (dac * 8) - 1;
+
+                if (writeData(dac, port, level) == false) {
+                    emit warningMessage(tr("LED Driver Error"), tr("Writes Data Error.\nCheck USB connection and try again!"));
+                    emit modelingFinished();
+                    resetDACs();
+                    return;
+                }
+
+                // Performs Scan with SMS500
+                enabledContinue = false;
+                emit performScan();
+                timer.start();
+
+                while (enabledContinue == false) {
+                    msleep(1); // wait 1ms for continue, see Qt Thread's Documentation
+                    if (timer.elapsed() >= 600000) {
+                        emit warningMessage(tr("LED Driver Error"), tr("Wait time to SMS500 perform scan or save data exceeded."));
+                        emit modelingFinished();
+                        resetDACs();
+                        return;
+                    }
+                    if (enabledModeling == false) {
+                        emit modelingFinished();
+                        resetDACs();
+                        return;
+                    }
+                }
+
+                if (nextChannel == true) {
+                    nextChannel = false;
+                    break; // Go to Next Channel
+                }
+
+                // Computing next level
+                if (updateType == levelIncrement) {
+                    level += incDecValue;
+                    if (level > 4095)
+                        break; // Go to Next Channel
+                } else if (updateType == levelDecrement) {
+                    level -= incDecValue;
+                    if (level < 0 )
+                        break; // Go to Next Channel
+                }
             }
 
-            // Find the value of Port
-            port = channel - (dac * 8) - 1;
+            emit saveData(QString::number(_channel));
 
-            if (writeData(dac, port, level) == false) {
+            // Cycle Port
+            if (ftdiCyclePort() == false) {
+                emit warningMessage(tr("LED Driver Error :: Cycle Port"), tr("Reset Device Error.\nCheck USB connection and try again!"));
+                break;
+            }
+        }
+
+        emit modelingFinished();
+        resetDACs();
+    }
+
+    else if (_operationMode == channelTest) {
+        int dac;
+        int port;
+
+        enabledModeling = true;
+
+        for (_channel = 1; _channel <= 96; _channel++) {
+            resetDACs();
+
+            // Find the value of DAC
+            if ((_channel % 8) != 0)
+                dac  = (_channel / 8);
+            else
+                dac  = _channel / 8 - 1;
+
+            // Find the value of Port
+            port = _channel - (dac * 8) - 1;
+
+            if (writeData(dac, port, 4095) == false) {
                 emit warningMessage(tr("LED Driver Error"), tr("Writes Data Error.\nCheck USB connection and try again!"));
-                emit modelingFinished();
-                resetDACs();
+                emit testFinished();
                 return;
             }
 
             // Performs Scan with SMS500
             enabledContinue = false;
             emit performScan();
-            timer.start();
 
-            while (enabledContinue == false) {
+            while (enabledContinue == false && enabledModeling == true)
                 msleep(1); // wait 1ms for continue, see Qt Thread's Documentation
-                if (timer.elapsed() >= 600000) {
-                    emit warningMessage(tr("LED Driver Error"), tr("Wait time to SMS500 perform scan or save data exceeded."));
-                    emit modelingFinished();
-                    resetDACs();
-                    return;
-                }
-                if (enabledModeling == false) {
-                    emit modelingFinished();
-                    resetDACs();
-                    return;
-                }
-            }
 
-            if (nextChannel == true) {
-                nextChannel = false;
-                break; // Go to Next Channel
-            }
-
-            // Computing next level
-            if (updateType == levelIncrement) {
-                level += incDecValue;
-                if (level > 4095) {
-                    break; // Go to Next Channel
-                }
-            } else if (updateType == levelDecrement) {
-                level -= incDecValue;
-                if (level < 0 ) {
-                    break; // Go to Next Channel
-                }
-            }
+            if (enabledModeling == false)
+                break;
         }
 
-        emit saveData(QString::number(channel));
-
-        // Cycle Port
-        if (ftdiCyclePort() == false) {
-            emit warningMessage(tr("LED Driver Error :: Cycle Port"), tr("Reset Device Error.\nCheck USB connection and try again!"));
-            break;
-        }
+        resetDACs();
+        emit testFinished();
     }
-
-    emit modelingFinished();
-    resetDACs();
 }

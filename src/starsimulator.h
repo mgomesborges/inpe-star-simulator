@@ -1,5 +1,5 @@
-#ifndef LSQNONLIN_H
-#define LSQNONLIN_H
+#ifndef STARSIMULATOR_H
+#define STARSIMULATOR_H
 
 #include <QThread>
 #include <QTime>
@@ -10,7 +10,7 @@
 using namespace Eigen;
 using namespace std;
 
-class LSqNonLin : public QThread
+class StarSimulator : public QThread
 {
     Q_OBJECT
 public:
@@ -31,20 +31,13 @@ public:
     {
         FITING_OK = 0,
         PERFORMING_FITING,
+        LOAD_DERIVATIVES,
         STOPPED
     };
 
-    explicit LSqNonLin(QObject *parent = 0);
-    ~LSqNonLin();
+    explicit StarSimulator(QObject *parent = 0);
+    ~StarSimulator();
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-
-    int randomInt(int low, int high);
-    bool loadDerivates();
-    void setAlgorithm(int algorithm);
-    void setx0Type(int x0SearchType, MatrixXi x = MatrixXi());
-    int  algorithmStatus();
-    int  iterationNumber();
-    double fx();
 
 signals:
     void ledDataNotFound();
@@ -55,29 +48,41 @@ signals:
 
 public slots:
     void stop();
-    void jacobian(const MatrixXi &x);
-    void getObjectiveFunction(const MatrixXi &x);
     void setObjectiveFunction(const MatrixXd &value);
+    void setActiveChannels(const MatrixXi &activeChannels);
     MatrixXi getSolution();
+    MatrixXi xWithConstraint(const MatrixXi &x);
+    void setAlgorithm(int algorithm);
+    void setx0Type(int x0SearchType, MatrixXi x = MatrixXi());
+    int  algorithmStatus();
+    int  iterationNumber();
+    double fx();
 
 private:
-    bool initialized;
+    bool isGDInitialized;
+    bool isLsqInitialized;
     bool enabledToContinue;
     bool stopThread;
     int chosenAlgorithm;
     int x0Type;
     int status;
     int iteration;
-    double _fx;
+    int numberOfValidChannels;
+    double fxCurrent;
     MatrixXi x0;
     MatrixXi solution;
+    MatrixXi activeChannels;
     MatrixXd jacobianMatrix;
     MatrixXd objectiveFunction;
     MatrixXi minimumDigitalLevelByChannel;
-    Matrix< MatrixXd, 1, 72> derivatives3DMatrix;
+    Matrix< MatrixXd, Dynamic, Dynamic> derivatives3DMatrix;
 
     void run();
+    bool loadDerivates();
     double media(int qty);
+    int randomInt(int low, int high);
+    void createJacobianMatrix(const MatrixXi &x);
+    void getObjectiveFunction(const MatrixXi &x);
 };
 
-#endif // LSQNONLIN_H
+#endif // STARSIMULATOR_H

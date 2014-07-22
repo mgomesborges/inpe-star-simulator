@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>LSqLoadLedDataDialog</class>
- <widget class="QWidget" name="LSqLoadLedDataDialog">
+ <class>StarSimulatorLoadLedData</class>
+ <widget class="QWidget" name="StarSimulatorLoadLedData">
   <property name="geometry">
    <rect>
     <x>0</x>

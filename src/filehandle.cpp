@@ -5,10 +5,10 @@ FileHandle::FileHandle(QWidget *parent) :
 {
 }
 
-FileHandle::FileHandle(QWidget *parent, const QString &caption) :
+FileHandle::FileHandle(QWidget *parent, const QString &caption, const QString &dir) :
     QWidget(parent)
 {
-    open(parent, caption);
+    open(parent, caption, dir);
 }
 
 FileHandle::FileHandle(const QString &caption, const QString &filePath)
@@ -16,10 +16,10 @@ FileHandle::FileHandle(const QString &caption, const QString &filePath)
     open(caption, filePath);
 }
 
-FileHandle::FileHandle(QWidget *parent, const QString &data, const QString &caption) :
+FileHandle::FileHandle(QWidget *parent, const QString &data, const QString &caption, const QString &dir) :
     QWidget(parent)
 {
-    save(parent, data, caption);
+    save(parent, data, caption, dir);
 }
 
 FileHandle::FileHandle(const QString &data, const QString &caption, const QString &filePath)
@@ -31,86 +31,107 @@ FileHandle::~FileHandle()
 {
     matrix.clear();
     inFile.close();
-    outFile.close();
 }
 
 void FileHandle::close()
 {
-    inStatus  = false;
-    outStatus = false;
     inFile.close();
 }
 
-bool FileHandle::open(QWidget *parent, const QString &caption)
+bool FileHandle::open(QWidget *parent, const QString &caption, const QString &dir)
 {
-    QString filePath = QFileDialog::getOpenFileName(parent,
-                                                    caption,
-                                                    QDir::homePath(),
-                                                    tr("Text document (*.txt);;All files (*.*)"));
+    QString filePath = QFileDialog::getOpenFileName(parent, caption, dir, tr("Text document (*.txt);;All files (*.*)"));
 
-    if (filePath.isEmpty()) {
-        inStatus = false;
+    if (filePath.isEmpty())
         return false;
-    }
+
+    updateLastDir(QFileInfo(filePath).path());
 
     return open(caption, filePath);
 }
 
 bool FileHandle::open(const QString &caption, const QString &filePath)
 {
+    if (inFile.isOpen())
+        inFile.close();
+
+    this->caption = caption;
     inFile.setFileName(filePath);
-    inStatus = inFile.open(QIODevice::ReadOnly);
-    FileHandle::caption = caption;
 
-    return inStatus;
-}
-
-bool FileHandle::save(QWidget *parent, const QString &data, const QString &caption)
-{
-    QString filePath = QFileDialog::getSaveFileName(parent,
-                                                    caption,
-                                                    QDir::homePath(),
-                                                    tr("Text document *.txt"));
-    if (filePath.isEmpty()) {
-        outStatus = false;
+    if (inFile.open(QIODevice::ReadOnly) == false) {
+        warningMessage(caption, tr("File %1 could not be opened\nor not found.\t").arg(inFile.fileName()));
         return false;
     }
 
-    // Checks if exist extension '.txt'
-    if (!filePath.contains(".txt")) {
+    return true;
+}
+
+bool FileHandle::save(QWidget *parent, const QString &data, const QString &caption, const QString &dir)
+{
+    QString filePath = QFileDialog::getSaveFileName(parent, caption, dir, tr("Text document *.txt"));
+    if (filePath.isEmpty())
+        return false;
+
+    if (!filePath.contains(".txt"))
         filePath.append(".txt");
-    }
+
+    updateLastDir(QFileInfo(filePath).path());
 
     return save(data, caption, filePath);
 }
 
 bool FileHandle::save(const QString &data, const QString &caption, const QString &filePath)
 {
-    outFile.setFileName(filePath);
-    outStatus = outFile.open(QIODevice::WriteOnly | QIODevice::Text);
-    if (outStatus == false) {
-        QMessageBox::warning(0, caption, tr("File could not be create.\t"));
+    QFile outFile(filePath);
+
+    if (outFile.open(QIODevice::WriteOnly | QIODevice::Text) == false) {
+        warningMessage(caption, tr("File %1 could not be create.\t").arg(filePath));
         return false;
     }
 
     outFile.write(data.toUtf8());
+    outFile.close();
+    return true;
+}
+
+bool FileHandle::save(const QVector<QVector<double> > &data, const QString &caption, const QString &filePath)
+{
+    if (!QDir(QFileInfo(filePath).path()).exists())
+        QDir().mkdir(QFileInfo(filePath).path());
+
+    QFile outFile(filePath);
+
+    if (outFile.open(QIODevice::WriteOnly) == false) {
+        warningMessage(caption, tr("File %1 could not be create.\t").arg((filePath)));
+        return false;
+    }
+
+    QDataStream out(&outFile);
+    out.setVersion(QDataStream::Qt_5_0);
+    out << data.size();    // rows
+    out << data[0].size(); // cols
+
+    for (int i = 0; i < data.size(); i++)
+        for (int j = 0; j < data[i].size(); j++)
+            out << data[i][j];
+
+    outFile.close();
     return true;
 }
 
 QVector< QVector<double> > FileHandle::data(const QString &section, bool *ok)
 {
-    if (inStatus == true) {
+    matrix.clear();
+
+    if (inFile.isOpen()) {
         QTextStream in(&inFile);
         QStringList fields;
         QString line;
         int lineNumber = 0;
 
-        matrix.clear();
-
         // Prevents errors in case of "ok" not to be passed as argument
-        if (ok == 0) {
+        if (ok == 0)
             ok = new bool;
-        }
 
         // Find section
         *ok = false;
@@ -119,13 +140,12 @@ QVector< QVector<double> > FileHandle::data(const QString &section, bool *ok)
             line = in.readLine();
             lineNumber++;
 
-            if (line.contains(section)) {
+            if (line.contains(section))
                 *ok = true;
-            }
         } while ((*ok == false) && !in.atEnd());
 
         if (*ok == false) {
-            QMessageBox::warning(0, caption, tr("Section %1 not found.\t").arg(section));
+            warningMessage(caption, tr("File %1\n\nSection %2 not found.\t").arg(inFile.fileName()).arg(section));
             return matrix; // size zero
         }
 
@@ -142,10 +162,10 @@ QVector< QVector<double> > FileHandle::data(const QString &section, bool *ok)
 
             // Is other section or line without data?
             if (line.count() == 0) {
-                if (matrix.isEmpty()) {
-                    QMessageBox::warning(0, caption, tr("Data not found.\t"));
-                }
-                break;
+                if (matrix.isEmpty())
+                    warningMessage(caption, tr("File %1\n\nData not found.\t").arg(inFile.fileName()));
+
+                return matrix;
             }
 
             fields = line.split("\t");
@@ -154,8 +174,7 @@ QVector< QVector<double> > FileHandle::data(const QString &section, bool *ok)
                 fields.at(i).toDouble(ok);
 
                 if (*ok == false) {
-                    QMessageBox::warning(0, caption, tr("Invalid data at line %1, column %2.\t")
-                                         .arg(lineNumber).arg(i + 1));
+                    warningMessage(caption, tr("File %1\n\nInvalid data at line %2, column %3.\t").arg(inFile.fileName()).arg(lineNumber).arg(i + 1));
                     matrix.clear(); // size zero
                     return matrix;
                 }
@@ -172,14 +191,13 @@ QString FileHandle::readSection(const QString &section, bool *ok)
 {
     QString data;
 
-    if (inStatus == true) {
+    if (inFile.isOpen()) {
         QTextStream in(&inFile);
         QString line;
 
         // Prevents errors in case of "ok" not to be passed as argument
-        if (ok == 0) {
+        if (ok == 0)
             ok = new bool;
-        }
 
         // Find section
         *ok = false;
@@ -187,13 +205,12 @@ QString FileHandle::readSection(const QString &section, bool *ok)
         do {
             line = in.readLine();
 
-            if (line.contains(section)) {
+            if (line.contains(section))
                 *ok = true;
-            }
         } while ((*ok == false) && !in.atEnd());
 
         if (*ok == false) {
-            QMessageBox::warning(0, caption, tr("Section %1 not found.\t").arg(section));
+            warningMessage(caption, tr("File %1\n\nSection %2 not found.\t").arg(inFile.fileName()).arg(section));
             return data; // size zero
         }
 
@@ -201,13 +218,13 @@ QString FileHandle::readSection(const QString &section, bool *ok)
         data.append(line + "\n"); // First line contains section's name
 
         while (!in.atEnd()) {
-            line   = in.readLine();
+            line = in.readLine();
 
             // Is other section?
             if (line.contains(QRegExp("^\\[[A-Za-z0-9-_.]+\\]$"))) {
-                if (data.isEmpty()) {
-                    QMessageBox::warning(0, caption, tr("Data not found.\t"));
-                }
+                if (data.isEmpty())
+                    warningMessage(caption, tr("File %1\n\nData not found.\t").arg(inFile.fileName()));
+
                 break;
             }
 
@@ -220,23 +237,19 @@ QString FileHandle::readSection(const QString &section, bool *ok)
 
 bool FileHandle::isValidData(int rows, int columns)
 {
-    if (matrix.isEmpty()) {
+    if (matrix.isEmpty())
         return false;
-    }
 
-    if ((matrix.size() == rows) && (columns== 0)) {
+    if ((matrix.size() == rows) && (columns == 0))
         return true;
-    }
 
-    if ((rows == 0) && (matrix[0].size() == columns)) {
+    if ((rows == 0) && (matrix[0].size() == columns))
         return true;
-    }
 
-    if ((matrix.size() == rows) && (matrix[0].size() == columns)) {
+    if ((matrix.size() == rows) && (matrix[0].size() == columns))
         return true;
-    }
 
-    QMessageBox::warning(0, caption, tr("Data doesn't match expected length.\t"));
+    warningMessage(caption, tr("File %1\n\nData doesn't match expected length.\t").arg(inFile.fileName()));
 
     return false;
 }

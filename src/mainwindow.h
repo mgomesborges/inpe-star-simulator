@@ -12,6 +12,11 @@
 #include <QDateTime>
 #include <QSignalMapper>
 
+
+#include <QLineEdit>
+#include <QGridLayout>
+
+
 #include "utils.h"
 #include "filehandle.h"
 
@@ -20,12 +25,13 @@
 #include "sms500.h"
 #include "leddriver.h"
 #include "aboutsmsdialog.h"
-#include "lsqnonlin.h"
-#include "lsqloadleddatadialog.h"
+#include "starsimulator.h"
+#include "starsimulatorloadleddata.h"
 #include "longtermstability.h"
 #include "longtermstabilityalarmclock.h"
 #include "longtermstabilityexportdialog.h"
 #include "ftdidevicechooserdialog.h"
+#include "configurechannelsdialog.h"
 #include "remotecontrol.h"
 
 #include "version.h"
@@ -48,21 +54,27 @@ public:
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
+    enum status {
+        STOPED,
+        GD_ALGORITHM
+    };
+
 private:
+    QGridLayout *createLedDriverLayout();
+    QGridLayout *createX0GridLayout();
     void uiInputValidator();
     void resizeEvent(QResizeEvent *);
     double trapezoidalNumInteg(QPolygonF points);
-    void sms500SignalAndSlot();
-    void ledDriverSignalAndSlot();
-    void lsqNonLinSignalAndSlot();
-    void longTermStabilitySignalAndSlot();
-    void remoteControlSignalAndSlot();
 
-    MatrixXi lsqNonLinx0();
+    MatrixXi lsqNonLinX0();
     QVector<int> ledDriverChannelValues();
 
+    // GUI Components
     Ui::MainWindow *ui;
     QLabel *statusLabel;
+    QLineEdit *starSimulatorX0[96];
+    QLineEdit *ledDriverChannel[96];
+
     Plot *plotSMS500;
     SMS500 *sms500;
     LedDriver *ledDriver;
@@ -72,7 +84,7 @@ private:
     vector< vector<double> > ledModelingData;
 
     Star *lsqNonLinStar;
-    LSqNonLin *lsqnonlin;
+    StarSimulator *lsqnonlin;
     Plot *plotLSqNonLin;
     QTime lsqNonLinTime;
     QVector<double> transferenceFunction;
@@ -86,9 +98,18 @@ private:
 
     RemoteControl *remoteControl;
 
+    QVector<int> activeChannels;
+
+    QString lastDir;
+
+    int currentStatus;
+
 private slots:
     void aboutThisSoftware();
     void warningMessage(const QString &caption, const QString &message);
+    void updateConfigureMenu(int selectedTab);
+    void setDigitalLevelForChannels();
+    void updateLastDir(QString path);
 
     void plotMoved(const QPoint&);
     void plotSelected(const QPolygon&);
@@ -128,26 +149,20 @@ private slots:
     void ledDriverDataHandle();
     bool ledDriverLoadValuesForChannels();
     void ledDriverGuiUpdate(QVector<double> level);
-    void ledDriverDac04Changed();
-    void ledDriverDac05Changed();
-    void ledDriverDac06Changed();
-    void ledDriverDac07Changed();
-    void ledDriverDac08Changed();
-    void ledDriverDac09Changed();
-    void ledDriverDac10Changed();
-    void ledDriverDac11Changed();
-    void ledDriverDac12Changed();
-
+    void ledDriverChannelChanged();
     void ledModeling();
     void ledModelingStart();
     void ledModelingStop();
     void ledModelingGuiConfig(bool enable);
     void ledModelingSaveData(QString channel);
     void ledModelingFinished();
+    void ledDriverTest();
+    void ledDriverTestFinished();
 
     void lsqNonLinStartStop();
     void lsqNonLinStart();
     void lsqNonLinStop();
+    void lsqNonLinStartGD();
     void lsqNonLinFinished();
     void lsqNonLinStarSettings();
     void lsqNonLinPerformScanWithUpdate();
@@ -160,7 +175,7 @@ private slots:
     bool lsqNonLinLoadInitialSolution();
     void starLoadTransferenceFunction();
     bool starUpdateTransferenceFunction();
-    void lsqNonLinInitialSolutionGuiUpdate(QVector<double> initialSolution);
+    void lsqNonLinX0GuiUpdate(QVector<double> x0);
 
     void longTermStabilityCreateDB();
     void longTermStabilityOpenDB();

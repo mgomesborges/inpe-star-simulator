@@ -15,8 +15,7 @@ class RemoteControl : public QDialog
     Q_OBJECT
 
 public:    
-    enum errorCodes
-    {
+    enum errorCodes {
         UNDEFINED = -1,
         SUCCESS = 0,
         SOCKET_NULL,
@@ -26,8 +25,7 @@ public:
         WITHOUT_ANSWER,
     };
 
-    enum algorithmStatus
-    {
+    enum algorithmStatus {
         FITING_OK = 0,
         PERFORMING_FITING,
         STOPPED

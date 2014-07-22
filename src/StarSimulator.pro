@@ -17,9 +17,6 @@ SOURCES += main.cpp\
     plot.cpp \
     sms500.cpp \
     leddriver.cpp \
-    lsqloadleddata.cpp \
-    lsqloadleddatadialog.cpp \
-    lsqnonlin.cpp \
     longtermstabilityexportdialog.cpp \
     longtermstability.cpp \
     longtermstabilityalarmclock.cpp \
@@ -27,7 +24,10 @@ SOURCES += main.cpp\
     filehandle.cpp \
     utils.cpp \
     ftdidevicechooserdialog.cpp \
-    remotecontrol.cpp
+    remotecontrol.cpp \
+    configurechannelsdialog.cpp \
+    starsimulator.cpp \
+    starsimulatorloadleddata.cpp
 
 HEADERS  += mainwindow.h \
     aboutsmsdialog.h \
@@ -36,9 +36,6 @@ HEADERS  += mainwindow.h \
     sms500.h \
     leddriver.h \
     ftd2xx.h \
-    lsqloadleddata.h \
-    lsqloadleddatadialog.h \
-    lsqnonlin.h \
     longtermstabilityexportdialog.h \
     longtermstability.h \
     longtermstabilityalarmclock.h \
@@ -47,14 +44,18 @@ HEADERS  += mainwindow.h \
     filehandle.h \
     utils.h \
     ftdidevicechooserdialog.h \
-    remotecontrol.h
+    remotecontrol.h \
+    configurechannelsdialog.h \
+    starsimulator.h \
+    starsimulatorloadleddata.h
 
 FORMS    += mainwindow.ui \
     aboutsmsdialog.ui \
-    lsqloadleddatadialog.ui \
     longtermstabilityexportdialog.ui \
     ftdidevicechooserdialog.ui \
-    remotecontrol.ui
+    remotecontrol.ui \
+    configurechannelsdialog.ui \
+    starsimulatorloadleddata.ui
 
 RESOURCES += \
     Pics.qrc

@@ -1,10 +1,10 @@
 #ifndef VERSION_H
 #define VERSION_H
 
-#define VER_BUILD_DATE_STR          "Build on 08/04/2014 at 11:00"
+#define VER_BUILD_DATE_STR          "Build on 16/07/2014 at 04:45"
 
-#define VER_FILEVERSION             1,3,0,0
-#define VER_FILEVERSION_STR         "1.3.0.0\0"
+#define VER_FILEVERSION             1,4,2,0
+#define VER_FILEVERSION_STR         "1.4.2.0\0"
 
 #define VER_PRODUCTVERSION          1,0,0,0
 #define VER_PRODUCTVERSION_STR      "1.0.0\0"
