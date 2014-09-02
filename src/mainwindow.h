@@ -16,9 +16,11 @@
 #include <QLineEdit>
 #include <QGridLayout>
 
+#include "generalsettings.h"
 
 #include "utils.h"
 #include "filehandle.h"
+#include "datatype.h"
 
 #include "plot.h"
 #include "star.h"
@@ -56,7 +58,8 @@ public:
 
     enum status {
         STOPED,
-        GD_ALGORITHM
+        GD_ALGORITHM,
+        LED_MODELING
     };
 
 private:
@@ -81,7 +84,8 @@ private:
     Plot *plotLedDriver;
     QString ledModelingFilePath;
     QString ledModelingConfiguration;
-    vector< vector<double> > ledModelingData;
+    QVector<QVector<double> > ledModelingData;
+    LedModelingBinaryData ledModelingBinaryData;
 
     Star *lsqNonLinStar;
     StarSimulator *lsqnonlin;
@@ -99,22 +103,29 @@ private:
     RemoteControl *remoteControl;
 
     QVector<int> activeChannels;
+    QVector<int> activeChannelsToLedModeling;
+    QVector<int> ledDriverPreviousChannelValues;
 
     QString lastDir;
 
     int currentStatus;
+
+    SMS500Parameters sms500parameters;
 
 private slots:
     void aboutThisSoftware();
     void warningMessage(const QString &caption, const QString &message);
     void updateConfigureMenu(int selectedTab);
     void setDigitalLevelForChannels();
+    void setGeneralSettings();
     void updateLastDir(QString path);
 
     void plotMoved(const QPoint&);
     void plotSelected(const QPolygon&);
     void plotShowInfo(const QString &text = QString::null);
 
+    SMS500Parameters sms500Settings();
+    void sms500SetSettings(SMS500Parameters parameters);
     void sms500About();
     void sms500OperationModeChanged();
     void sms500AutoRangeChanged(bool enable);
@@ -151,10 +162,13 @@ private slots:
     void ledDriverGuiUpdate(QVector<double> level);
     void ledDriverChannelChanged();
     void ledModeling();
+    void ledModelingStartPreprocessing();
     void ledModelingStart();
     void ledModelingStop();
+    void ledModelingSettings();
     void ledModelingGuiConfig(bool enable);
     void ledModelingSaveData(QString channel);
+    void ledModelingSaveDerivatives(QString channel);
     void ledModelingFinished();
     void ledDriverTest();
     void ledDriverTestFinished();

@@ -34,14 +34,12 @@ public:
     void modelingNextChannel();
     QVector<int> digitalLevelIndex();
 
-
 signals:
     void warningMessage(QString title, QString message);
     void performScan();
     void saveData(QString currentChannel);
     void modelingFinished();
     void testFinished();
-    void info(QString message);
 
 public slots:
     void stop();
@@ -56,7 +54,9 @@ public slots:
     bool ftdiCyclePort();
     int operationMode();
     void setOperationMode(int mode);
+    void setActiveChannels(const QVector<int> &activeChannels);
     int currentChannel();
+    int currentLevel();
 
 private:
     void run();
@@ -72,9 +72,11 @@ private:
     bool enabledModeling;
     bool enabledContinue;
     bool nextChannel;
-    int _channel;
-    int _operationMode;
+    int level;
+    int channel;
+    int mode;
     QVector<int> levelIndex;
+    QVector<int> activeChannels;
 };
 
 #endif // LEDDRIVER_H

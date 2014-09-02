@@ -35,6 +35,8 @@ private:
     DWORD numDevs;
     DWORD iDevice;
     FT_STATUS ftStatus;
+    QString filePath;
+    FileHandle file;
 };
 
 #endif // FTDIDEVICECHOOSERDIALOG_H

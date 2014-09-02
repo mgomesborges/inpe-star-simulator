@@ -5,6 +5,8 @@
 #include <QTime>
 #include <QDir>
 
+#include "datatype.h"
+
 #include <Eigen/Dense>
 
 using namespace Eigen;
@@ -48,6 +50,7 @@ signals:
 
 public slots:
     void stop();
+    void setSettings(StarSimulatorParameters parameters);
     void setObjectiveFunction(const MatrixXd &value);
     void setActiveChannels(const MatrixXi &activeChannels);
     MatrixXi getSolution();
@@ -55,19 +58,21 @@ public slots:
     void setAlgorithm(int algorithm);
     void setx0Type(int x0SearchType, MatrixXi x = MatrixXi());
     int  algorithmStatus();
-    int  iterationNumber();
+    uint  iterationNumber();
     double fx();
+    bool enableUpdatePlot();
 
 private:
     bool isGDInitialized;
-    bool isLsqInitialized;
+    bool isLMInitialized;
     bool enabledToContinue;
+    bool enablePlot;
     bool stopThread;
     int chosenAlgorithm;
     int x0Type;
     int status;
-    int iteration;
     int numberOfValidChannels;
+    uint iteration;
     double fxCurrent;
     MatrixXi x0;
     MatrixXi solution;
@@ -76,6 +81,7 @@ private:
     MatrixXd objectiveFunction;
     MatrixXi minimumDigitalLevelByChannel;
     Matrix< MatrixXd, Dynamic, Dynamic> derivatives3DMatrix;
+    StarSimulatorParameters settings;
 
     void run();
     bool loadDerivates();

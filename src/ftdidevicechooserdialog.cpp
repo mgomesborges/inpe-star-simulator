@@ -11,6 +11,9 @@ FTDIDeviceChooserDialog::FTDIDeviceChooserDialog(QWidget *parent) :
     connect(ui->btnRescan, SIGNAL(clicked()), this, SLOT(deviceInfoList()));
     deviceInfoList();
     iDevice = -1;
+
+    filePath = QDir::currentPath() + "/config.txt";
+    file.open(tr("Load Config file"), filePath);
 }
 
 FTDIDeviceChooserDialog::~FTDIDeviceChooserDialog()
@@ -35,9 +38,8 @@ void FTDIDeviceChooserDialog::deviceInfoList()
 
         if (ftStatus == FT_OK) {
             QStringList devices;
-            for (DWORD i = 0; i < numDevs; i++) {
+            for (DWORD i = 0; i < numDevs; i++)
                 devices << tr("USB-%1: %2").arg(i).arg(deviceName(devInfo[i].Type));
-            }
 
             ui->comboBox->clear();
             ui->comboBox->addItems(devices);
@@ -101,37 +103,25 @@ int FTDIDeviceChooserDialog::defaultConnection(bool enableChooseDevice)
 {
     deviceInfoList();
 
-    if (numDevs == 0) {
+    if (numDevs == 0)
         return -1; // Error: without device
-    }
 
     iDevice = -1; // Initial condition
 
-    // Get default connection information
-    FileHandle fileInput(tr("Load Config file"),
-                         QDir::currentPath() + "/config.txt");
-
     // Get default connection
-    QString defaultConnection = fileInput.readSection(tr("[DefaultConnection]"));
+    QString defaultConnection = file.readSection(tr("[FTDIDefaultConnection]"));
 
-    for (DWORD i = 0; i < numDevs; i++) {
+    for (DWORD i = 0; i < numDevs; i++)
         // Magic <=> do not touch
-        if (defaultConnection.contains(tr("Device=%1").arg(deviceName(devInfo[i].Type)))) {
-            if (defaultConnection.contains(tr("ID=%1").arg(devInfo[i].ID))) {
-                if (defaultConnection.contains(tr("SerialNumber=%1").arg(devInfo[i].SerialNumber))) {
-                    if (defaultConnection.contains(tr("LocID=%1").arg(devInfo[i].LocId))) {
-                        if (defaultConnection.contains(tr("Description=%1").arg(devInfo[i].Description))) {
+        if (defaultConnection.contains(tr("Device=%1").arg(deviceName(devInfo[i].Type))))
+            if (defaultConnection.contains(tr("ID=%1").arg(devInfo[i].ID)))
+                if (defaultConnection.contains(tr("SerialNumber=%1").arg(devInfo[i].SerialNumber)))
+                    if (defaultConnection.contains(tr("LocID=%1").arg(devInfo[i].LocId)))
+                        if (defaultConnection.contains(tr("Description=%1").arg(devInfo[i].Description)))
                             iDevice = i;
-                        }
-                    }
-                }
-            }
-        }
-    }
 
-    if (enableChooseDevice == true && iDevice == -1) {
+    if (enableChooseDevice == true && iDevice == -1)
         this->exec();
-    }
 
     return iDevice;
 }
@@ -142,16 +132,14 @@ void FTDIDeviceChooserDialog::saveDefaultConnection()
 
     iDevice = ui->comboBox->currentIndex();
 
-    data.append(tr("[DefaultConnection]\n"));
+    data.append(tr("[FTDIDefaultConnection]\n"));
     data.append(tr("Device=%1\n").arg(deviceName(devInfo[iDevice].Type)));
     data.append(tr("ID=%1\n").arg(devInfo[iDevice].ID));
     data.append(tr("SerialNumber=%1\n").arg(devInfo[iDevice].SerialNumber));
     data.append(tr("LocID=%1\n").arg(devInfo[iDevice].LocId));
     data.append(tr("Description=%1\n").arg(devInfo[iDevice].Description));
 
-    FileHandle fileOutput(data,
-                          tr("Save Config File"),
-                          QDir::currentPath() + "/config.txt");
+    file.save(data, tr("Save Config File"), tr("[FTDIDefaultConnection]"), filePath);
 
     this->close();
 }

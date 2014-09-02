@@ -1,20 +1,17 @@
 #ifndef REMOTECONTROL_H
 #define REMOTECONTROL_H
 
-#include <QDialog>
+#include <QObject>
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QTimer>
 
-namespace Ui {
-class RemoteControl;
-}
+#include "datatype.h"
 
-class RemoteControl : public QDialog
+class RemoteControl : public QObject
 {
     Q_OBJECT
-
-public:    
+public:
     enum errorCodes {
         UNDEFINED = -1,
         SUCCESS = 0,
@@ -23,6 +20,7 @@ public:
         INVALID_COMMAND,
         ERROR_WRONG_PARAMETERS,
         WITHOUT_ANSWER,
+        WRONG_RETURN
     };
 
     enum algorithmStatus {
@@ -31,18 +29,8 @@ public:
         STOPPED
     };
 
-    explicit RemoteControl(QWidget *parent = 0);
-    ~RemoteControl();
+    explicit RemoteControl(QObject *parent = 0);
     void listen();
-
-public slots:
-    void newConnection();
-    void readyRead();
-    void disconnected();
-    void setPort();
-    bool isConnected();
-    void sendAnswer(int errorCode);
-    void sendAnswer(QString data);
 
 signals:
     void setSMS500AutoRange(bool enable);
@@ -50,6 +38,7 @@ signals:
     void SMS500Disconnect();
     void SMS500StartScan();
     void SMS500StopScan();
+    void setSMS500DefaultSettings(SMS500Parameters settings);
     void setSMS500NumberOfScans(QString value);
     void setSMS500IntegrationTime(int index);
     void setSMS500SamplesToAverage(int value);
@@ -77,8 +66,16 @@ signals:
     void starSimulatorStatus();
     void starSimulatorIrradiances();
 
+public slots:
+    void newConnection();
+    void readyRead();
+    void disconnected();
+    void setPort(int port);
+    bool isConnected();
+    void sendAnswer(int errorCode);
+    void sendAnswer(QString data);
+
 private:
-    Ui::RemoteControl *ui;
     QTcpServer* server;
     QTcpSocket* socket;
     int numberOfConnections;

@@ -24,10 +24,11 @@ SOURCES += main.cpp\
     filehandle.cpp \
     utils.cpp \
     ftdidevicechooserdialog.cpp \
-    remotecontrol.cpp \
     configurechannelsdialog.cpp \
     starsimulator.cpp \
-    starsimulatorloadleddata.cpp
+    starsimulatorloadleddata.cpp \
+    generalsettings.cpp \
+    remotecontrol.cpp
 
 HEADERS  += mainwindow.h \
     aboutsmsdialog.h \
@@ -44,18 +45,20 @@ HEADERS  += mainwindow.h \
     filehandle.h \
     utils.h \
     ftdidevicechooserdialog.h \
-    remotecontrol.h \
     configurechannelsdialog.h \
     starsimulator.h \
-    starsimulatorloadleddata.h
+    starsimulatorloadleddata.h \
+    generalsettings.h \
+    datatype.h \
+    remotecontrol.h
 
 FORMS    += mainwindow.ui \
     aboutsmsdialog.ui \
     longtermstabilityexportdialog.ui \
     ftdidevicechooserdialog.ui \
-    remotecontrol.ui \
     configurechannelsdialog.ui \
-    starsimulatorloadleddata.ui
+    starsimulatorloadleddata.ui \
+    generalsettings.ui
 
 RESOURCES += \
     Pics.qrc

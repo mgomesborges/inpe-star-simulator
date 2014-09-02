@@ -1,30 +1,24 @@
 #include "remotecontrol.h"
-#include "ui_remotecontrol.h"
 
 #include <iostream>
 #include <QFile>
 #include <QDataStream>
 
-RemoteControl::RemoteControl(QWidget *parent) :
-    QDialog(parent),
-    ui(new Ui::RemoteControl)
+RemoteControl::RemoteControl(QObject *parent) :
+    QObject(parent)
 {
-    ui->setupUi(this);
     socket = NULL;
     port   = 6000;
     numberOfConnections = 0;
     server = new QTcpServer(this);
     connect(server, SIGNAL(newConnection()), this, SLOT(newConnection()));
-    connect(ui->btnOk, SIGNAL(clicked()), this, SLOT(setPort()));
-}
-
-RemoteControl::~RemoteControl()
-{
-    delete ui;
 }
 
 void RemoteControl::listen()
 {
+    if (server->isListening())
+        server->close();
+
     server->listen(QHostAddress::Any, port);
 }
 
@@ -56,37 +50,41 @@ void RemoteControl::readyRead()
         tokens.append(byteArray.mid(index1+1, index2-index1-1));
 
         if(tokens[0] == "SMS500Connect") {
-            if (tokens[1].size() == 0) {
+            if (tokens[1].size() == 0)
                 emit SMS500Connect();
-            } else {
+            else
                 sendAnswer(ERROR_WRONG_PARAMETERS);
-            }
         }
 
         else if(tokens[0] == "SMS500Disconnect") {
             if (tokens[1].size() == 0) {
                 emit SMS500Disconnect();
                 sendAnswer(SUCCESS);
-            } else {
+            } else
                 sendAnswer(ERROR_WRONG_PARAMETERS);
-            }
         }
 
         else if(tokens[0] == "SMS500StartScan") {
-            if (tokens[1].size() == 0) {
+            if (tokens[1].size() == 0)
                 emit SMS500StartScan();
-            } else {
+            else
                 sendAnswer(ERROR_WRONG_PARAMETERS);
-            }
         }
 
         else if(tokens[0] == "SMS500StopScan") {
             if (tokens[1].size() == 0) {
                 emit SMS500StopScan();
                 sendAnswer(SUCCESS);
-            } else {
+            } else
                 sendAnswer(ERROR_WRONG_PARAMETERS);
-            }
+        }
+
+        else if(tokens[0] == "setSMS500DefaultSettings") {
+            if (tokens[1].size() == 0) {
+                emit setSMS500DefaultSettings(SMS500Parameters());
+                sendAnswer(SUCCESS);
+            } else
+                sendAnswer(ERROR_WRONG_PARAMETERS);
         }
 
         else if(tokens[0] == "setSMS500NumberOfScans") {
@@ -96,9 +94,8 @@ void RemoteControl::readyRead()
             if (ok == true && value >= -1 && value != 0) {
                 emit setSMS500NumberOfScans(tokens[1].data());
                 sendAnswer(SUCCESS);
-            } else {
+            } else
                 sendAnswer(ERROR_WRONG_PARAMETERS);
-            }
         }
 
         else if(tokens[0] == "setSMS500AutoRange") {
@@ -108,9 +105,8 @@ void RemoteControl::readyRead()
             } else if (tokens[1] == "false") {
                 emit setSMS500AutoRange(false);
                 sendAnswer(SUCCESS);
-            } else {
+            } else
                 sendAnswer(ERROR_WRONG_PARAMETERS);
-            }
         }
 
         else if(tokens[0] == "setSMS500IntegrationTime") {
@@ -120,9 +116,8 @@ void RemoteControl::readyRead()
             if (ok == true && value >= 0 && value <= 22) {
                 emit setSMS500IntegrationTime(value);
                 sendAnswer(SUCCESS);
-            } else {
+            } else
                 sendAnswer(ERROR_WRONG_PARAMETERS);
-            }
         }
 
         else if(tokens[0] == "setSMS500SamplesToAverage") {
@@ -132,9 +127,8 @@ void RemoteControl::readyRead()
             if (ok == true && value >= 1 && value <= 99) {
                 emit setSMS500SamplesToAverage(value);
                 sendAnswer(SUCCESS);
-            } else {
+            } else
                 sendAnswer(ERROR_WRONG_PARAMETERS);
-            }
         }
 
         else if(tokens[0] == "setSMS500BoxcarSmothing") {
@@ -144,9 +138,8 @@ void RemoteControl::readyRead()
             if (ok == true && value >= 1 && value <= 50) {
                 emit setSMS500BoxcarSmothing(value);
                 sendAnswer(SUCCESS);
-            } else {
+            } else
                 sendAnswer(ERROR_WRONG_PARAMETERS);
-            }
         }
 
         else if(tokens[0] == "setSMS500NoiseReduction") {
@@ -156,9 +149,8 @@ void RemoteControl::readyRead()
             } else if (tokens[1] == "false") {
                 emit setSMS500NoiseReduction(false);
                 sendAnswer(SUCCESS);
-            } else {
+            } else
                 sendAnswer(ERROR_WRONG_PARAMETERS);
-            }
         }
 
         else if(tokens[0] == "setSMS500NoiseReductionFactor") {
@@ -168,9 +160,8 @@ void RemoteControl::readyRead()
             if (ok == true && value >= 1 && value <= 50) {
                 emit setSMS500NoiseReductionFactor(tokens[1].data());
                 sendAnswer(SUCCESS);
-            } else {
+            } else
                 sendAnswer(ERROR_WRONG_PARAMETERS);
-            }
         }
 
         else if(tokens[0] == "setSMS500CorrectForDynamicDark") {
@@ -180,44 +171,39 @@ void RemoteControl::readyRead()
             } else if (tokens[1] == "false") {
                 emit setSMS500CorrectForDynamicDark(false);
                 sendAnswer(SUCCESS);
-            } else {
+            } else
                 sendAnswer(ERROR_WRONG_PARAMETERS);
-            }
         }
 
         else  if(tokens[0] == "LEDDriverConnect") {
-            if (tokens[1].size() == 0) {
+            if (tokens[1].size() == 0)
                 emit LEDDriverConnect();
-            } else {
+            else
                 sendAnswer(ERROR_WRONG_PARAMETERS);
-            }
         }
 
         else if(tokens[0] == "LEDDriverDisconnect") {
             if (tokens[1].size() == 0) {
                 emit LEDDriverDisconnect();
                 sendAnswer(SUCCESS);
-            } else {
+            } else
                 sendAnswer(ERROR_WRONG_PARAMETERS);
-            }
         }
 
         else  if(tokens[0] == "startLEDDriverModeling") {
             if (tokens[1].size() == 0) {
                 emit startLEDDriverModeling();
                 sendAnswer(SUCCESS);
-            } else {
+            } else
                 sendAnswer(ERROR_WRONG_PARAMETERS);
-            }
         }
 
         else if(tokens[0] == "stopLEDDriverModeling") {
             if (tokens[1].size() == 0) {
                 emit stopLEDDriverModeling();
                 sendAnswer(SUCCESS);
-            } else {
+            } else
                 sendAnswer(ERROR_WRONG_PARAMETERS);
-            }
         }
 
         else if(tokens[0] == "setLEDDriverV2Ref") {
@@ -227,9 +213,8 @@ void RemoteControl::readyRead()
             } else if (tokens[1] == "false") {
                 emit setLEDDriverV2Ref(false);
                 sendAnswer(SUCCESS);
-            } else {
+            } else
                 sendAnswer(ERROR_WRONG_PARAMETERS);
-            }
         }
 
         else if(tokens[0] == "setLEDDriverValues") {
@@ -257,9 +242,8 @@ void RemoteControl::readyRead()
             if (ok == true && value >= -9 && value <= 9) {
                 emit setStarMagnitude(tokens[1].data());
                 sendAnswer(SUCCESS);
-            } else {
+            } else
                 sendAnswer(ERROR_WRONG_PARAMETERS);
-            }
         }
 
         else if(tokens[0] == "setStarTemperature") {
@@ -269,9 +253,8 @@ void RemoteControl::readyRead()
             if (ok == true && value >= 100 && value <= 999999) {
                 emit setStarTemperature(tokens[1].data());
                 sendAnswer(SUCCESS);
-            } else {
+            } else
                 sendAnswer(ERROR_WRONG_PARAMETERS);
-            }
         }
 
         else if(tokens[0] == "setStarSimulatorAlgorithm") {
@@ -281,9 +264,8 @@ void RemoteControl::readyRead()
             } else if (tokens[1] == "gd") {
                 emit setStarSimulatorAlgorithmGD(true);
                 sendAnswer(SUCCESS);
-            } else {
+            } else
                 sendAnswer(ERROR_WRONG_PARAMETERS);
-            }
         }
 
         else if(tokens[0] == "setStarSimulatorX0") {
@@ -296,9 +278,8 @@ void RemoteControl::readyRead()
             } else if (tokens[1] == "ledDriver") {
                 emit setStarSimulatorX0ledDriver(true);
                 sendAnswer(SUCCESS);
-            } else {
+            } else
                 sendAnswer(ERROR_WRONG_PARAMETERS);
-            }
         }
 
         else if(tokens[0] == "starSimulatorLoadInitialSolution") {
@@ -320,36 +301,32 @@ void RemoteControl::readyRead()
         }
 
         else if(tokens[0] == "startStarSimulator") {
-            if (tokens[1].size() == 0) {
+            if (tokens[1].size() == 0)
                 emit startStarSimulator();
-            } else {
+            else
                 sendAnswer(ERROR_WRONG_PARAMETERS);
-            }
         }
 
         else if(tokens[0] == "stopStarSimulator") {
             if (tokens[1].size() == 0) {
                 emit stopStarSimulator();
                 sendAnswer(SUCCESS);
-            } else {
+            } else
                 sendAnswer(ERROR_WRONG_PARAMETERS);
-            }
         }
 
         else if(tokens[0] == "starSimulatorStatus") {
-            if (tokens[1].size() == 0) {
+            if (tokens[1].size() == 0)
                 emit starSimulatorStatus();
-            } else {
+            else
                 sendAnswer(ERROR_WRONG_PARAMETERS);
-            }
         }
 
         else if(tokens[0] == "starSimulatorIrradiances") {
-            if (tokens[1].size() == 0) {
+            if (tokens[1].size() == 0)
                 emit starSimulatorIrradiances();
-            } else {
+            else
                 sendAnswer(ERROR_WRONG_PARAMETERS);
-            }
         }
 
         else if (tokens[0] == "closeConnection") {
@@ -371,33 +348,31 @@ void RemoteControl::disconnected()
     numberOfConnections = 0;
 }
 
-void RemoteControl::setPort()
+void RemoteControl::setPort(int port)
 {
-    server->close();
-    this->disconnected();
-    port = ui->port->text().toInt();
+    if (numberOfConnections >= 1)
+        disconnected();
+
+    this->port = port;
     listen();
-    this->close();
 }
 
 bool RemoteControl::isConnected()
 {
-    if (numberOfConnections == 0) {
+    if (numberOfConnections == 0)
         return false;
-    }
+
     return true;
 }
 
 void RemoteControl::sendAnswer(int errorCode)
 {
-    if (numberOfConnections >= 1) {
+    if (numberOfConnections >= 1)
         socket->write(tr("%1").arg(errorCode).toStdString().data());
-    }
 }
 
 void RemoteControl::sendAnswer(QString data)
 {
-    if (numberOfConnections >= 1) {
+    if (numberOfConnections >= 1)
         socket->write(data.toUtf8().data());
-    }
 }

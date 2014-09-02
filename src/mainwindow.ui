@@ -284,8 +284,8 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>196</width>
-               <height>382</height>
+               <width>220</width>
+               <height>396</height>
               </rect>
              </property>
              <attribute name="label">
@@ -839,23 +839,6 @@ p, li { white-space: pre-wrap; }
          <string/>
         </property>
        </widget>
-       <widget class="QLabel" name="scanInfo">
-        <property name="geometry">
-         <rect>
-          <x>700</x>
-          <y>30</y>
-          <width>61</width>
-          <height>23</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
-&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
-p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS Shell Dlg 2'; font-size:8.25pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:14pt; color:#ff0000;&quot;&gt; &lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-        </property>
-       </widget>
        <widget class="QWidget" name="horizontalLayoutWidget">
         <property name="geometry">
          <rect>
@@ -1083,7 +1066,7 @@ Modeling</string>
                  </size>
                 </property>
                 <property name="text">
-                 <string>1</string>
+                 <string>50</string>
                 </property>
                 <property name="alignment">
                  <set>Qt::AlignCenter</set>
@@ -2009,14 +1992,13 @@ Database</string>
     <property name="title">
      <string>&amp;Configure</string>
     </property>
-    <addaction name="actionConfigureLEDDriverconnection"/>
-    <addaction name="separator"/>
-    <addaction name="actionRemoteControl"/>
+    <addaction name="actionSetValues"/>
     <addaction name="separator"/>
     <addaction name="actionLoadStarSimulatorDatabase"/>
     <addaction name="actionLoadTransferenceFunction"/>
     <addaction name="separator"/>
-    <addaction name="actionSetValues"/>
+    <addaction name="actionConfigureLEDDriverconnection"/>
+    <addaction name="actionGeneralSettings"/>
    </widget>
    <addaction name="menuCalibration"/>
    <addaction name="menuStarSimulatorSettings"/>
@@ -2062,11 +2044,6 @@ Database</string>
     <string>LED Driver connection</string>
    </property>
   </action>
-  <action name="actionRemoteControl">
-   <property name="text">
-    <string>Remote Control</string>
-   </property>
-  </action>
   <action name="actionSetValues">
    <property name="text">
     <string>Set Star Simulator x0</string>
@@ -2083,6 +2060,11 @@ Database</string>
   <action name="actionLEDDriverTest">
    <property name="text">
     <string>LED Driver Test</string>
+   </property>
+  </action>
+  <action name="actionGeneralSettings">
+   <property name="text">
+    <string>General Settings</string>
    </property>
   </action>
  </widget>

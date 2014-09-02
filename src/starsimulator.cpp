@@ -13,9 +13,10 @@ StarSimulator::StarSimulator(QObject *parent) :
     iteration         = 0;
     fxCurrent         = 0;
     isGDInitialized   = false;
-    isLsqInitialized  = false;
+    isLMInitialized  = false;
     stopThread        = false;
     enabledToContinue = false;
+    enablePlot        = true;
     x0Type            = x0Random;
 
     // Create seed for the random
@@ -32,6 +33,11 @@ void StarSimulator::stop()
 {
     stopThread = true;
     status     = STOPPED;
+}
+
+void StarSimulator::setSettings(StarSimulatorParameters parameters)
+{
+    settings = parameters;
 }
 
 void StarSimulator::setObjectiveFunction(const MatrixXd &value)
@@ -90,7 +96,7 @@ int StarSimulator::algorithmStatus()
     return status;
 }
 
-int StarSimulator::iterationNumber()
+uint StarSimulator::iterationNumber()
 {
     return iteration;
 }
@@ -98,6 +104,11 @@ int StarSimulator::iterationNumber()
 double StarSimulator::fx()
 {
     return fxCurrent;
+}
+
+bool StarSimulator::enableUpdatePlot()
+{
+    return enablePlot;
 }
 
 void StarSimulator::run()
@@ -126,12 +137,13 @@ void StarSimulator::run()
         }
     }
 
-    MatrixXi xCurrent(numberOfValidChannels, 1);  // Current solution
+    MatrixXi xCurrent(numberOfValidChannels, 1); // Current solution
+    MatrixXi xBest(numberOfValidChannels, 1);    // Best solution
     MatrixXd deltaX;
     MatrixXd I;
 
+    double fxBest     = 1e15; // Big number
     double fxPrevious = 0;
-    double alpha      = 6.5;  // Empirical value
     int stopCriteria  = 0;
 
     /*************************************************************************
@@ -158,7 +170,12 @@ void StarSimulator::run()
          * Least Square Non Linear :: Levenberg Marquardt (LM)
          ****************************************************/
         if (chosenAlgorithm == leastSquareNonLinear) {
-            for (int i = 0; i < 1000 && stopThread == false; i++) {
+
+            emit info("=========================================================="
+                      "<pre>\n              Levenberg Marquardt Algorithm\n</pre>"
+                      "==========================================================");
+
+            for (uint i = 0; i < 1000000 && stopThread == false; i++) {
                 iteration++;
 
                 getObjectiveFunction(xCurrent);
@@ -174,18 +191,23 @@ void StarSimulator::run()
                 fxPrevious = fxCurrent;
                 fxCurrent  = sqrt((objectiveFunction.array().pow(2)).sum());
 
-                emit info(tr("Iteration: %1\tf(x): %2\tf(x)_previous: %3").arg(i).arg(fxCurrent).arg(fxPrevious));
+                emit info(tr("<pre>It %1    f(x):<font color='#ff0000'> %2</font>    f(x)_previous:<font color='#ff0000'> %3</font></pre>").arg(i, 3, 'f', 0, '0').arg(fxCurrent, 0, 'e', 4).arg(fxPrevious, 0, 'e', 4));
 
                 // Check stopping criterion
-                if (fxCurrent > fxPrevious) {
+                if (fxCurrent < fxBest) {
+                    fxBest       = fxCurrent;
+                    xBest        = xCurrent;
+                    stopCriteria = 0;
+                } else {
                     stopCriteria++;
 
-                    if (stopCriteria == 20) {
-                        emit info(tr("\n\nLeast Square Finished by Stop Criteria: f(x) = %1").arg(fxCurrent));
+                    if (stopCriteria == settings.lmMaxIteration) {
+                        fxCurrent = fxBest;
+                        getObjectiveFunction(xBest);
+                        emit info(tr("<pre>\n\nLeast Square Finished by Stop Criteria: f(x) = <font color='#ff0000'>%1</font>\n\n</pre>").arg(fxCurrent, 0, 'e', 4));
                         break;
                     }
-                } else
-                    stopCriteria = 0;
+                }
 
                 /****************************************************
                  * Create Jacobian Matrix (J)
@@ -200,13 +222,13 @@ void StarSimulator::run()
                 /****************************************************
                  * deltaX = inv(J' * J + alpha * I) * J' * objectiveFunction;
                  ****************************************************/
-                deltaX = (jacobianMatrix.transpose() * jacobianMatrix + alpha * I).inverse() *
+                deltaX = (jacobianMatrix.transpose() * jacobianMatrix + settings.lmDampingFactor * I).inverse() *
                           jacobianMatrix.transpose() * objectiveFunction;
 
                 /****************************************************
                  * Update xCurrent (Current solution)
                  ****************************************************/
-                xCurrent  = xWithConstraint(xCurrent - (deltaX).cast<int>());
+                xCurrent = xWithConstraint(xCurrent - (deltaX).cast<int>());
             }
 
        /****************************************************
@@ -214,23 +236,54 @@ void StarSimulator::run()
         ****************************************************/
         } else if (chosenAlgorithm == gradientDescent) {
 
-            int delta = 50;
-            alpha     = 0.05;  // Empirical value
+            MatrixXi xUpdated         = xCurrent;
+            double fxInternalPrevious = 0;
+            double fxInternalCurrent  = 0;
+            int delta                 = 50;
 
-            for (int i = 0; i < 1000 && stopThread == false; i++) {
+            emit info("=========================================================="
+                      "<pre>\n                 Gradient Descent Algorithm\n</pre>"
+                      "==========================================================");
+
+            for (uint i = 0; i < 1000000 && stopThread == false; i++) {
                 iteration++;
+
+                xCurrent   = xWithConstraint(xUpdated);
+                getObjectiveFunction(xCurrent);
+
+                /****************************************************
+                 * Update fxCurrent, fxPrevious and fxInternalPrevious
+                 *
+                 * fxInternalPrevious = sum(objectiveFunction^2);
+                 * fxCurrent         = sqrt( sum(objectiveFunction^2) );
+                 ****************************************************/
+                fxPrevious         = fxCurrent;
+                fxInternalPrevious = (objectiveFunction.array().pow(2)).sum();
+                fxCurrent          = sqrt(fxInternalPrevious);
+
+                // Check stopping criterion
+                if (fxCurrent < fxBest) {
+                    fxBest       = fxCurrent;
+                    xBest        = xCurrent;
+                    stopCriteria = 0;
+                } else {
+                    stopCriteria++;
+
+                    if (stopCriteria == settings.gdMaxIteration) {
+                        fxCurrent = fxBest;
+                        getObjectiveFunction(xBest);
+                        emit info(tr("<pre>\n\nGradient Descent Finished by Stop Criteria: f(x) = <font color='#ff0000'>%1</font>\n\n</pre>").arg(fxCurrent, 0, 'e', 4));
+                        break;
+                    }
+                }
 
                 /****************************************************
                  * Computing derivatives for each channel
                  ****************************************************/
+                enablePlot = false;
+
                 for (int channel = 0; channel < numberOfValidChannels; channel++) {
-                    /****************************************************
-                     * Update DELTA value to prevents constraint problem
-                     ****************************************************/
-                    if ((xCurrent(channel) + delta) > 4095)
-                        delta = - delta;
-                    else
-                        delta = abs(delta);
+                    emit info(tr("<pre>It %1    f(x):<font color='#ff0000'> %2</font>    f(x)_previous:<font color='#ff0000'> %3</font>    [&part;ch<font color='#ff0000'>%4</font>]</pre>").arg(i, 3, 'f', 0, '0').arg(fxCurrent, 0, 'e', 4).arg(fxPrevious, 0, 'e', 4).arg(activeChannels(channel) + 1, 2, 'f', 0, '0'));
 
                     /****************************************************
                      * Get Objective Function with xCurrent + delta
@@ -240,42 +293,27 @@ void StarSimulator::run()
                     xCurrent(channel) = xCurrent(channel) - delta;
 
                     msleep(1); // wait 1ms for continue, see Qt Thread's Documentation
-                    if (stopThread == true)
-                        break;
-
-                   /****************************************************
-                    * Update fxCurrent and fxPrevious
-                    * fxCurrent = sum(objectiveFunction^2);
-                    ****************************************************/
-                   fxPrevious = fxCurrent;
-                   fxCurrent  = (objectiveFunction.array().pow(2)).sum();
-
-                   /****************************************************
-                    * Update xCurrent (Current solution)
-                    ****************************************************/
-                    xCurrent(channel) = round(xCurrent(channel) - alpha * (fxCurrent - fxPrevious) / delta);
-                    xCurrent = xWithConstraint(xCurrent);
-                }
-
-                /****************************************************
-                 * Update fxCurrent and fxPrevious
-                 * fxCurrent = sqrt( sum(objectiveFunction^2) );
-                 ****************************************************/
-                fxPrevious = sqrt(fxPrevious);
-                fxCurrent  = sqrt(fxCurrent);
-
-                // Stop Criteria
-                if (fxCurrent > fxPrevious) {
-                    stopCriteria++;
-
-                    if (stopCriteria == 10) {
-                        emit info(tr("\n\nLeast Square Finished by Stop Criteria: f(x) = %1").arg(fxCurrent));
+                    if (stopThread == true) {
+                        enablePlot = true;
+                        getObjectiveFunction(xWithConstraint(xCurrent));
                         break;
                     }
-                } else
-                    stopCriteria = 0;
 
-                emit info(tr("Iteration: %1\tf(x): %2\tf(x)_previous: %3").arg(i).arg(fxCurrent).arg(fxPrevious));
+                   /****************************************************
+                    * Updated fxInternalCurrent
+                    * fxInternalCurrent = sum(objectiveFunction^2);
+                    ****************************************************/
+                    fxInternalCurrent = (objectiveFunction.array().pow(2)).sum();
+
+                   /****************************************************
+                    * Update xUpdated (new solution)
+                    ****************************************************/
+                    xUpdated(channel) = round(xCurrent(channel) - settings.gdDampingFactor * (fxInternalCurrent - fxInternalPrevious) / delta);
+                }
+
+                emit info("==========================================================");
+
+                enablePlot = true;
             }
         }
 
@@ -290,14 +328,18 @@ void StarSimulator::run()
         double max = firstMedia * 1.01;
         double min = firstMedia * 0.99;
 
+        emit info("=========================================================="
+                  "<pre>\n                 Stabilization routine\n</pre>"
+                  "==========================================================");
+
+
         while (stopThread == false) {
             secondMedia = media(10);
 
-            if (secondMedia < min || secondMedia > max) {
-                emit info(tr("Min: %1\t>= %2 <=\t\tMax: %3\t[>1%]").arg(min).arg(secondMedia).arg(max));
+            emit info(tr("<pre>Min:<font color='#ff0000'>%1</font>    &ge;    %2    &le;    Max: <font color='#ff0000'>%3</font></pre>").arg(min, 0, 'e', 4).arg(secondMedia, 0, 'e', 4).arg(max, 0, 'e', 4));
+
+            if (secondMedia < min || secondMedia > max)
                 break;
-            } else
-                emit info(tr("Min: %1\t>= %2 <=\t\tMax: %3").arg(min).arg(secondMedia).arg(max));
         }
     }
 
@@ -307,7 +349,7 @@ void StarSimulator::run()
 
 bool StarSimulator::loadDerivates()
 {
-    if (isLsqInitialized == false) {
+    if (isLMInitialized == false) {
         int rows;
         int cols;
 
@@ -325,7 +367,7 @@ bool StarSimulator::loadDerivates()
                 return false;
             }
 
-            emit info(tr("Loading LED Data from channel %1 of 96").arg(channel + 1));
+            emit info(tr("<pre>Loading LED Data from channel  <font color='#ff0000'><b>%1</b></font>  of  <font color='#ff0000'><b>96</b></font></pre>").arg(channel + 1, 2, 'f', 0, '0'));
 
             QDataStream in(&inFile);
             in.setVersion(QDataStream::Qt_5_0);
@@ -352,7 +394,7 @@ bool StarSimulator::loadDerivates()
             }
         }
 
-        isLsqInitialized = true;
+        isLMInitialized = true;
         activeChannels.conservativeResize(numberOfValidChannels, 1);
         jacobianMatrix.conservativeResize(641, numberOfValidChannels);
         derivatives3DMatrix.conservativeResize(1, numberOfValidChannels);
