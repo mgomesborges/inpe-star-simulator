@@ -51,8 +51,6 @@ public:
     bool save(QWidget *parent, const QString &data, const QString &section, const QString &caption, QString *dir);
     bool save(const QString &data, const QString &caption, const QString &filePath);
     bool save(const QString &data, const QString &caption, const QString &section, const QString &filePath);
-    bool save(const QVector< QVector<double> > &data, const QString &caption, const QString &filePath);
-    bool save(const LedModelingBinaryData &data, const QString &caption, const QString &filePath);
 
     QVector< QVector<double> > data(const QString &section = QString());
     SectionInfo sectionInfo(const QString &section);

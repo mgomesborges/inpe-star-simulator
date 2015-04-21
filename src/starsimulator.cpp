@@ -6,14 +6,14 @@ StarSimulator::StarSimulator(QObject *parent) :
     activeChannels.resize(96, 1);
     solution.resize(96, 1);
     objectiveFunction.resize(641, 1);
+    modelingStep.resize(96, 1);
     derivatives3DMatrix.resize(1, 96);
-    minimumDigitalLevelByChannel.resize(1, 96);
 
     status            = STOPPED;
     iteration         = 0;
     fxCurrent         = 0;
     isGDInitialized   = false;
-    isLMInitialized  = false;
+    isLMInitialized   = false;
     stopThread        = false;
     enabledToContinue = false;
     enablePlot        = true;
@@ -68,13 +68,8 @@ MatrixXi StarSimulator::xWithConstraint(const MatrixXi &x)
             matrix(row) = 4095;
 
         // Impose a bound constraint for minimum value
-        if (chosenAlgorithm == leastSquareNonLinear) {
-            if (matrix(row) < minimumDigitalLevelByChannel(row))
-                matrix(row) = minimumDigitalLevelByChannel(row);
-        } else {
-            if (matrix(row) < 0)
-                matrix(row) = 0;
-        }
+        if (matrix(row) < 0)
+            matrix(row) = 0;
     }
 
     return matrix;
@@ -149,13 +144,13 @@ void StarSimulator::run()
     /*************************************************************************
      * Initial Solution: x0
      ************************************************************************/
-    if (x0Type == x0Random)
+    if (x0Type == x0Random) {
         for (int row = 0; row < xCurrent.rows(); row++)
             xCurrent(row) = randomInt(0, 4095);
-
-    else if ((x0Type == x0UserDefined) || (x0Type == x0Current))
+    } else if ((x0Type == x0UserDefined) || (x0Type == x0Current)) {
         for (int i = 0; i < xCurrent.rows(); i++)
             xCurrent(i) = x0(activeChannels(i));
+    }
 
     // Impose a bound constraint
     xCurrent = xWithConstraint(xCurrent);
@@ -191,7 +186,7 @@ void StarSimulator::run()
                 fxPrevious = fxCurrent;
                 fxCurrent  = sqrt((objectiveFunction.array().pow(2)).sum());
 
-                emit info(tr("<pre>It %1    f(x):<font color='#ff0000'> %2</font>    f(x)_previous:<font color='#ff0000'> %3</font></pre>").arg(i, 3, 'f', 0, '0').arg(fxCurrent, 0, 'e', 4).arg(fxPrevious, 0, 'e', 4));
+                emit info(tr("<pre>It %1    f(x):<font color='#ff0000'> %2</font></pre>").arg(i, 3, 'f', 0, '0').arg(fxCurrent, 0, 'e', 4));
 
                 // Check stopping criterion
                 if (fxCurrent < fxBest) {
@@ -255,7 +250,7 @@ void StarSimulator::run()
                  * Update fxCurrent, fxPrevious and fxInternalPrevious
                  *
                  * fxInternalPrevious = sum(objectiveFunction^2);
-                 * fxCurrent         = sqrt( sum(objectiveFunction^2) );
+                 * fxCurrent          = sqrt( sum(objectiveFunction^2) );
                  ****************************************************/
                 fxPrevious         = fxCurrent;
                 fxInternalPrevious = (objectiveFunction.array().pow(2)).sum();
@@ -350,55 +345,65 @@ void StarSimulator::run()
 bool StarSimulator::loadDerivates()
 {
     if (isLMInitialized == false) {
-        int rows;
-        int cols;
 
         status = LOAD_DERIVATIVES;
         numberOfValidChannels = 0;
+
+        int derivativeStep;
 
         for (int channel = 0; channel < 96; channel++) {
             msleep(1); // wait 1ms for continue, see Qt Thread's Documentation
             if (stopThread == true)
                 return false;
 
-            QFile inFile(QDir::currentPath() + "/led_database/ch" + QString::number(channel + 1) + ".led");
-            if (inFile.open(QIODevice::ReadOnly) == false) {
+            FileHandle *file = new FileHandle();
+
+            if (!file->open(tr("Load LED Data"), QDir::currentPath() + "/led_database/ch" + QString::number(channel + 1) + ".txt")) {
                 emit ledDataNotFound();
                 return false;
             }
 
-            emit info(tr("<pre>Loading LED Data from channel  <font color='#ff0000'><b>%1</b></font>  of  <font color='#ff0000'><b>96</b></font></pre>").arg(channel + 1, 2, 'f', 0, '0'));
+            QVector< QVector<double> > matrix = file->data("[SMS500Data]");
+            QVector< QVector<double> > config = file->data("[LEDModelingConfiguration]");
 
-            QDataStream in(&inFile);
-            in.setVersion(QDataStream::Qt_5_0);
-            in >> rows;
-            in >> cols;
+            if (matrix.isEmpty() || config.isEmpty()) {
+                emit ledDataNotFound();
+                return false;
+            }
 
-            // If channel ok, with correct data
-            if (cols > 2) {
-                MatrixXd matrixWithChannelData;
-                matrixWithChannelData.resize(rows, cols);
+            if (matrix[0].size() > 2) {
+                modelingStep(numberOfValidChannels) = config[0][1];
 
-                for (int i = 0; i < rows; i++)
-                    for (int j = 0; j < cols; j++)
-                        in >> matrixWithChannelData(i, j);
+                // LED Modeling Configuration
+                if (config[0][0] == 0)
+                    // If the digital level is from 0 to 4095 (see modeling type)
+                    derivativeStep = config[0][1];
+                else
+                    // If the digital level is from 4095 to 0 (see modeling type)
+                    derivativeStep = - config[0][1];
 
-                inFile.close();
+                MatrixXd channelData = Utils::qvector2eigen(matrix);
+                MatrixXd derivatives;
+
+                derivatives.resize(channelData.rows(), channelData.cols() - 1);
+                derivatives.col(0) = channelData.col(0); // Column 0 contains wavelengths values
+
+                // Computing Derivatives
+                for (int column = 1; column < channelData.cols() - 1; column++)
+                    derivatives.col(column) = (channelData.col(column + 1) - channelData.col(column)) / derivativeStep;
 
                 activeChannels(numberOfValidChannels)      = channel;
-                derivatives3DMatrix(numberOfValidChannels) = matrixWithChannelData;
-
-                // Record the Minimum Digital Level
-                minimumDigitalLevelByChannel(numberOfValidChannels) = 4095 - (cols - 2);
+                derivatives3DMatrix(numberOfValidChannels) = derivatives;
                 numberOfValidChannels++;
             }
+
+            emit info(tr("<pre>Loading LED Data from channel  <font color='#ff0000'><b>%1</b></font>  of  <font color='#ff0000'><b>96</b></font></pre>").arg(channel + 1, 2, 'f', 0, '0'));
         }
 
         isLMInitialized = true;
         activeChannels.conservativeResize(numberOfValidChannels, 1);
         jacobianMatrix.conservativeResize(641, numberOfValidChannels);
         derivatives3DMatrix.conservativeResize(1, numberOfValidChannels);
-        minimumDigitalLevelByChannel.conservativeResize(1, numberOfValidChannels);
     }
 
     return true;
@@ -416,7 +421,7 @@ double StarSimulator::media(int qty)
         while (enabledToContinue == false && stopThread == false) // Wait SMS500 performs the scan
             msleep(1);
 
-        // value += sqrt(sum(objectiveFunction^2));
+        // value += sqrt( sum(objectiveFunction^2) );
         value += sqrt((objectiveFunction.array().pow(2)).sum());
     }
 
@@ -435,11 +440,18 @@ void StarSimulator::createJacobianMatrix(const MatrixXi &x)
      *
      * Each column contains the derivatives of LED depending on
      * the digital level applied in the channel. First column contains the
-     * wavelength, thus the specific column is calculated by:
-     * Column = 4095 - x(i) + 1
+     * wavelength.
      *************************************************************************/
+
     for (int i = 0; i < numberOfValidChannels; i++)
-        jacobianMatrix.col(i) = derivatives3DMatrix(i).col(4095 - x(i) + 1);
+    {
+        int column = (int)((4095 - x(i)) / modelingStep(i) + 1);
+
+        if (column >= derivatives3DMatrix(i).cols())
+            column = derivatives3DMatrix(i).cols() - 1;
+
+        jacobianMatrix.col(i) = derivatives3DMatrix(i).col(column);
+    }
 }
 
 void StarSimulator::getObjectiveFunction(const MatrixXi &x)

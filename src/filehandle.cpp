@@ -128,62 +128,6 @@ bool FileHandle::save(const QString &data, const QString &caption, const QString
 }
 
 /**
- * @brief Save a binary file.
- */
-bool FileHandle::save(const QVector<QVector<double> > &data, const QString &caption, const QString &filePath)
-{
-    if (!QDir(QFileInfo(filePath).path()).exists())
-        QDir().mkdir(QFileInfo(filePath).path());
-
-    QFile outFile(filePath);
-
-    if (outFile.open(QIODevice::WriteOnly) == false) {
-        warningMessage(caption, tr("File %1 could not be create.\t").arg((filePath)));
-        return false;
-    }
-
-    QDataStream out(&outFile);
-    out.setVersion(QDataStream::Qt_5_0);
-    out << data.size();    // rows
-    out << data[0].size(); // cols
-
-    for (int i = 0; i < data.size(); i++)
-        for (int j = 0; j < data[i].size(); j++)
-            out << data[i][j];
-
-    outFile.close();
-    return true;
-}
-
-// VALIDAR ESSE E APAGAR O DE CIMA
-bool FileHandle::save(const LedModelingBinaryData &data, const QString &caption, const QString &filePath)
-{
-    if (!QDir(QFileInfo(filePath).path()).exists())
-        QDir().mkdir(QFileInfo(filePath).path());
-
-    QFile outFile(filePath);
-
-    if (outFile.open(QIODevice::WriteOnly) == false) {
-        warningMessage(caption, tr("File %1 could not be create.\t").arg((filePath)));
-        return false;
-    }
-
-    QDataStream out(&outFile);
-    out.setVersion(QDataStream::Qt_5_0);
-    out << data.levelIncDec;      // Level increment or decrement
-    out << data.step;             // Derivative step
-    out << data.matrix.size();    // rows
-    out << data.matrix[0].size(); // cols
-
-    for (int i = 0; i < data.matrix.size(); i++)
-        for (int j = 0; j < data.matrix[i].size(); j++)
-            out << data.matrix[i][j];
-
-    outFile.close();
-    return true;
-}
-
-/**
  * @brief Read a matrix in txt file previously opened.
  */
 QVector< QVector<double> > FileHandle::data(const QString &section)

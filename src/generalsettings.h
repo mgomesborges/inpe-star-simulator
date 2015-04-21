@@ -38,6 +38,7 @@ public slots:
     void lmMaxIterationChanged();
     void gdDampingFactorChanged();
     void gdMaxIterationChanged();
+    void objectiveFunctionFactorChanged();
     StarSimulatorParameters starSimulatorSettings();
 
     void saveSettings();

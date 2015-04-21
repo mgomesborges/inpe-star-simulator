@@ -38,6 +38,8 @@ MainWindow::MainWindow(QWidget *parent) :
     remoteControl->setPort(settings.remoteControlSettings().tcpPort);
     remoteControl->listen();
 
+    objectiveFunctionFactor = settings.starSimulatorSettings().ofFactor;
+
     plotSMS500->setxLabel(tr("Wavelength (nm)"));
     plotSMS500->setyLabel(tr("uW/nm"));
 
@@ -295,6 +297,7 @@ void MainWindow::setGeneralSettings()
     settings->exec();
 
     remoteControl->setPort(settings->remoteControlSettings().tcpPort);
+    objectiveFunctionFactor = settings->starSimulatorSettings().ofFactor;
 }
 
 void MainWindow::updateLastDir(QString path)
@@ -1104,18 +1107,19 @@ void MainWindow::ledModelingSaveData(QString channel)
 
     // Data
     for (int i = 0; i < ledModelingData.size(); i++) {
-        for (uint j = 0; j < ledModelingData[0].size(); j++) {
+        for (int j = 0; j < ledModelingData[0].size(); j++) {
+            if (j > 0)
+                data.append("\t");
+
             if (ledModelingData[i][j] <= 0)
-                data.append(tr("%1\t").arg("0"));
+                data.append(tr("%1").arg("0"));
             else
-                data.append(tr("%1\t").arg(ledModelingData[i][j]));
+                data.append(tr("%1").arg(ledModelingData[i][j]));
         }
         data.append("\n");
     }
 
     FileHandle file(data, tr("LED Driver - Save Data"), tr("%1/ch%2.txt").arg(ledModelingFilePath).arg(channel));
-
-    ledModelingSaveDerivatives(channel);
 
     // Reset LED Modeling Data structure
     ledModelingData.clear();
@@ -1127,41 +1131,6 @@ void MainWindow::ledModelingSaveData(QString channel)
 
     ui->integrationTimeComboBox->setCurrentIndex(5);
     sms500->resetScanNumber();
-}
-
-void MainWindow::ledModelingSaveDerivatives(QString channel)
-{
-    // Led Modeling Setup
-    int modelingType;
-    if (ui->levelIncDecComboBox->currentIndex() == 0)
-        modelingType = LedDriver::levelDecrement;
-    else
-        modelingType = LedDriver::levelIncrement;
-
-    ledModelingBinaryData.levelIncDec = modelingType;
-    ledModelingBinaryData.step        = ui->levelIncDecValue->text().toInt();
-
-
-    MatrixXd channelData = Utils::qvector2eigen(ledModelingData);
-    MatrixXd derivatives;
-
-    // Prevents errors with columns == 2 OR channels without data
-    if (channelData.cols() <= 2)
-        derivatives.resize(channelData.rows(), 2);
-    else
-        derivatives.resize(channelData.rows(), channelData.cols() - 1);
-
-    derivatives.col(0) = channelData.col(0); // Column 0 contains wavelengths values
-    derivatives.col(1) = MatrixXd::Constant(channelData.rows(), 1, 1); // Column of ones
-
-    // Computing Derivatives
-    for (int column = 1; column < channelData.cols() - 1; column++)
-        derivatives.col(column) = (channelData.col(column + 1) - channelData.col(column)) / ledModelingBinaryData.step;
-
-    // Save Binary Data (*.led)
-    FileHandle *file = new FileHandle();
-    ledModelingBinaryData.matrix = Utils::eigen2QVector(derivatives);
-    file->save(ledModelingBinaryData, tr("Load LED Data"), tr("%1/led_database/ch%2.led").arg(ledModelingFilePath).arg(channel));
 }
 
 void MainWindow::ledModelingFinished()
@@ -1241,8 +1210,10 @@ void MainWindow::ledDriverTestFinished()
     sms500SetSettings(sms500parameters);
 
     QVector<double> temp(ledDriverPreviousChannelValues.size());
+
     for (int i = 0; i < ledDriverPreviousChannelValues.size(); i++)
         temp[i] = ledDriverPreviousChannelValues[i];
+
     ledDriverGuiUpdate(temp); // Need a cast QVector<int> to QVector<double>
 
     // Configure GUI
@@ -1364,8 +1335,6 @@ void MainWindow::lsqNonLinStop()
     if (lsqnonlin->isRunning()) {
         ui->btnStartStopStarSimulator->setEnabled(false);
         lsqnonlin->stop();
-        //        lsqnonlin->wait(5000);
-        //        sms500StopScan();
     }
 }
 
@@ -1439,7 +1408,7 @@ void MainWindow::lsqNonLinObjectiveFunction()
                 f(i) = (masterData[i] * transferenceFunction[i]) - (starData[i][1]);
 
             // Due to very small values ​​of the objective function was necessary to add this multiplier
-            f(i) *= 1e11;;
+            f(i) *= objectiveFunctionFactor;
         }
 
         lsqnonlin->setObjectiveFunction(f);

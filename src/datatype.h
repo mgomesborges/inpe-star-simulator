@@ -1,6 +1,8 @@
 #ifndef DATATYPE_H
 #define DATATYPE_H
 
+#include <QVector>
+
 typedef enum SMS500ModeType {
     Flux = 0,
     Intensity,
@@ -51,20 +53,16 @@ struct StarSimulatorParameters {
     int lmMaxIteration;
     double gdDampingFactor;
     int gdMaxIteration;
+    double ofFactor;
 
     // Default values
     StarSimulatorParameters()
-        : lmDampingFactor(6.5)
+        : lmDampingFactor(1.5)
         , lmMaxIteration(20)
         , gdDampingFactor(0.05)
         , gdMaxIteration(10)
+        , ofFactor(1e10)
     {}
-};
-
-struct LedModelingBinaryData {
-    int levelIncDec;
-    int step;
-    QVector<QVector<double> > matrix;
 };
 
 #endif // DATATYPE_H

@@ -85,13 +85,13 @@ private:
     QString ledModelingFilePath;
     QString ledModelingConfiguration;
     QVector<QVector<double> > ledModelingData;
-    LedModelingBinaryData ledModelingBinaryData;
 
     Star *lsqNonLinStar;
     StarSimulator *lsqnonlin;
     Plot *plotLSqNonLin;
     QTime lsqNonLinTime;
     QVector<double> transferenceFunction;
+    double objectiveFunctionFactor;
     double outputIrradiance; // Updated in plotScanResult()
     double starIrradiance;   // Updated in plotScanResult()
 
@@ -168,7 +168,6 @@ private slots:
     void ledModelingSettings();
     void ledModelingGuiConfig(bool enable);
     void ledModelingSaveData(QString channel);
-    void ledModelingSaveDerivatives(QString channel);
     void ledModelingFinished();
     void ledDriverTest();
     void ledDriverTestFinished();

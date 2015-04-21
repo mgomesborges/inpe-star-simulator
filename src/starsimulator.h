@@ -5,7 +5,9 @@
 #include <QTime>
 #include <QDir>
 
+#include "utils.h"
 #include "datatype.h"
+#include "filehandle.h"
 
 #include <Eigen/Dense>
 
@@ -79,7 +81,7 @@ private:
     MatrixXi activeChannels;
     MatrixXd jacobianMatrix;
     MatrixXd objectiveFunction;
-    MatrixXi minimumDigitalLevelByChannel;
+    MatrixXi modelingStep;
     Matrix< MatrixXd, Dynamic, Dynamic> derivatives3DMatrix;
     StarSimulatorParameters settings;
 

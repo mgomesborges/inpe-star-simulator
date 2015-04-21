@@ -8,6 +8,7 @@ GeneralSettings::GeneralSettings(QWidget *parent) :
     ui->setupUi(this);
     ui->noiseReductionLineEdit->setValidator(new QRegExpValidator(QRegExp("^$|^[1-9][0-9]{0,1}$|^100$"), this));
     ui->remoteControlTCPPort->setValidator(new QRegExpValidator(QRegExp("^$|^[1-9][0-9]{0,5}$"), this));
+    ui->objectiveFunctionFactor->setValidator(new QRegExpValidator(QRegExp("^$|^[1-9]e[1-9][0-9]{0,1}$"), this));
     ui->lmDampingFactor->setValidator(new QRegExpValidator(QRegExp("^$|^-[1-9][.][0-9]{1,2}|-0[.][1-9]{1,2}|[0-9][.][0-9]{1,2}|-[1-9][0-9]{0,1}|[1-9][0-9]{0,1}$"), this));
     ui->lmMaxIteration->setValidator(new QRegExpValidator(QRegExp("^$|^[1-9][0-9]{0,1}$|^100$"), this));
     ui->gdDampingFactor->setValidator(new QRegExpValidator(QRegExp("^$|^-[1-9][.][0-9]{1,2}|-0[.][1-9]{1,2}|[0-9][.][0-9]{1,2}|-[1-9][0-9]{0,1}|[1-9][0-9]{0,1}$"), this));
@@ -21,6 +22,7 @@ GeneralSettings::GeneralSettings(QWidget *parent) :
     connect(ui->lmMaxIteration, SIGNAL(editingFinished()), this, SLOT(lmMaxIterationChanged()));
     connect(ui->gdDampingFactor, SIGNAL(editingFinished()), this, SLOT(gdDampingFactorChanged()));
     connect(ui->gdMaxIteration, SIGNAL(editingFinished()), this, SLOT(gdMaxIterationChanged()));
+    connect(ui->objectiveFunctionFactor, SIGNAL(editingFinished()), this, SLOT(objectiveFunctionFactorChanged()));
     connect(ui->btnOk, SIGNAL(clicked()), this, SLOT(saveSettings()));
 
     filePath = QDir::currentPath() + "/config.txt";
@@ -57,6 +59,7 @@ void GeneralSettings::updateGui()
     ui->lmMaxIteration->setText(tr("%1").arg(settings.starSimulator.lmMaxIteration));
     ui->gdDampingFactor->setText(tr("%1").arg(settings.starSimulator.gdDampingFactor));
     ui->gdMaxIteration->setText(tr("%1").arg(settings.starSimulator.gdMaxIteration));
+    ui->objectiveFunctionFactor->setText((tr("%1").arg(settings.starSimulator.ofFactor)));
 }
 
 void GeneralSettings::sms500AutoRangeChanged(bool enable)
@@ -137,7 +140,7 @@ RemoteControlParameters GeneralSettings::remoteControlSettings()
 void GeneralSettings::lmDampingFactorChanged()
 {
     if (ui->lmDampingFactor->text().isEmpty())
-        ui->lmDampingFactor->setText("6.5");
+        ui->lmDampingFactor->setText("1.5");
 }
 
 void GeneralSettings::lmMaxIterationChanged()
@@ -156,6 +159,12 @@ void GeneralSettings::gdMaxIterationChanged()
 {
     if (ui->gdMaxIteration->text().isEmpty())
         ui->gdMaxIteration->setText("10");
+}
+
+void GeneralSettings::objectiveFunctionFactorChanged()
+{
+    if (ui->objectiveFunctionFactor->text().isEmpty())
+        ui->objectiveFunctionFactor->setText("1e10");
 }
 
 StarSimulatorParameters GeneralSettings::starSimulatorSettings()
@@ -177,6 +186,9 @@ StarSimulatorParameters GeneralSettings::starSimulatorSettings()
 
         if (!(temp = list.filter(tr("GDMaxIteration"))).isEmpty())
             settings.gdMaxIteration = temp.at(0).mid(15, 10).toInt();
+
+        if (!(temp = list.filter(tr("OFFactor"))).isEmpty())
+            settings.ofFactor = temp.at(0).mid(9, 10).toDouble();
     }
 
     return settings;
@@ -222,6 +234,7 @@ void GeneralSettings::saveSettings(const StarSimulatorParameters &parameters)
     data.append(tr("LMMaxIteration=%1\n").arg(parameters.lmMaxIteration));
     data.append(tr("GDDampingFactor=%1\n").arg(parameters.gdDampingFactor));
     data.append(tr("GDMaxIteration=%1\n").arg(parameters.gdMaxIteration));
+    data.append(tr("OFFactor=%1\n").arg(parameters.ofFactor));
 
     file.save(data, tr("Save Config file"), tr("[StarSimulator]"), filePath);
 }
@@ -252,6 +265,7 @@ void GeneralSettings::saveStarSimulatorSettings()
     settings.starSimulator.lmMaxIteration  = ui->lmMaxIteration->text().toInt();
     settings.starSimulator.gdDampingFactor = ui->gdDampingFactor->text().toDouble();
     settings.starSimulator.gdMaxIteration  = ui->gdMaxIteration->text().toInt();
+    settings.starSimulator.ofFactor        = ui->objectiveFunctionFactor->text().toDouble();
 
     saveSettings(settings.starSimulator);
 }
